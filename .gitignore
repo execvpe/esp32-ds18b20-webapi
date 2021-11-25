@@ -8,3 +8,4 @@ lib/
 test/
 
 include/README
+include/encData.hpp
