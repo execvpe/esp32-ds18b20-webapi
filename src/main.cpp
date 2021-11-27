@@ -1,12 +1,15 @@
 #include <WiFi.h>
 
-#include "ServerWrapper.hpp"
+#include "SimpleServer.hpp"
+#include "StringMacros.hpp"
+#include "TSensor.hpp"
 #include "decrypt.hpp"
 #include "encData.hpp"
 
 #define STATIC_IP  // enable if using static ip instead of DHCP
 
-ServerWrapper server;
+SimpleServer server;
+TSensor tsensor;
 
 namespace WifiHandler {
 	namespace {	 // "private"
@@ -18,7 +21,7 @@ namespace WifiHandler {
 #endif
 	};	// namespace
 
-	void init() {
+	void begin() {
 #ifdef STATIC_IP
 		if (!WiFi.config(localIP, gateway, subnet, primaryDNS, primaryDNS)) {
 			Serial.println("STA Failed to configure");
@@ -44,22 +47,47 @@ namespace WifiHandler {
 
 void setup() {
 	Serial.begin(115200);
-	WifiHandler::init();
-	server.init();
+	WifiHandler::begin();
+	server.begin();
 }
 
-static void send(WiFiClient client) {
-	client.println("<html><head><title>");
-	client.println("Ventilation Temperature Control");
-	client.println("</title></head><body>");
-	client.println("<b>THIS IS A TEST VALUE!</b>");
-	client.println("</body></html>");
+static int check(const char *path) {
+	if (path[0] == '/')
+		path++;
+
+	/////////////////////////////////////////////
+
+	if (S_EQUALS(path, "TEMP_C"))
+		return 1001;
+
+	if (S_EQUALS(path, "STATUS_PAGE"))
+		return 90001;
+
+	return 0;
+}
+
+static void send(WiFiClient &client, const char *path, int code) {
+	switch (code) {
+		case 1001:
+			client.printf("%.2f" CRLF, tsensor.getCelsius());
+			break;
+		case 90001:
+			client.printf(
+				"<html><head>"
+				"<title>Ventilation Temperature Control</title>"
+				"</head><body>"
+				"<b>Current Temperature:</b> %.2f C"
+				"</body></html>" CRLF,
+				tsensor.getCelsius());
+		default:
+			return;
+	}
 }
 
 void loop() {
 	WiFiClient client = server.accept();
 
 	if (server.isAvailable(client))
-		server.handleConnection(client, &send);
+		server.handleConnection(client, &check, &send);
 	client.stop();
 }
