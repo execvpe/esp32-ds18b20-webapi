@@ -69,7 +69,7 @@ static int check(const char *path) {
 static void send(WiFiClient &client, const char *path, int code) {
 	switch (code) {
 		case 1001:
-			client.printf("%.2f" CRLF, tsensor.getCelsius());
+			client.printf("%.2f", tsensor.getCelsius());
 			break;
 		case 90001:
 			client.printf(
@@ -77,7 +77,7 @@ static void send(WiFiClient &client, const char *path, int code) {
 				"<title>Ventilation Temperature Control</title>"
 				"</head><body>"
 				"<b>Current Temperature:</b> %.2f C"
-				"</body></html>" CRLF,
+				"</body></html>",
 				tsensor.getCelsius());
 		default:
 			return;

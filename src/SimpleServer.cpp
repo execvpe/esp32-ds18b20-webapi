@@ -100,7 +100,6 @@ void SimpleServer::handleConnection(WiFiClient &client, int (*check)(const char 
 	const char *tokens[3];
 	tokens[0] = strtok(request, " ");
 	if (tokens[0] == NULL || !S_MATCH_FIRST(tokens[0], "GET", 3)) {
-		Serial.println(1);
 		httpBadRequest(client, requestDup);
 		return;
 	}
@@ -120,7 +119,6 @@ void SimpleServer::handleConnection(WiFiClient &client, int (*check)(const char 
 			return;
 		}
 	}
-	Serial.println(2);
 	httpBadRequest(client, requestDup);
 }
 
