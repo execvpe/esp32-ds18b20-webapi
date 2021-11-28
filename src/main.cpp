@@ -6,7 +6,7 @@
 #include "decrypt.hpp"
 #include "encData.hpp"
 
-#define STATIC_IP  // enable if using static ip instead of DHCP
+#define CUSTOM_HOSTNAME "ESP32-0-T"
 
 SimpleServer server;
 TSensor tsensor;
@@ -22,12 +22,15 @@ namespace WifiHandler {
 	};	// namespace
 
 	void begin() {
+#ifdef CUSTOM_HOSTNAME
+		WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+		WiFi.setHostname(CUSTOM_HOSTNAME);
+#endif
 #ifdef STATIC_IP
 		if (!WiFi.config(localIP, gateway, subnet, primaryDNS, primaryDNS)) {
 			Serial.println("STA Failed to configure");
 		}
 #endif
-
 		char ssid[33];
 		char password[65];
 		decryptShuffled(ENCRYPTED_FIELD, 0, ssid);
@@ -40,8 +43,11 @@ namespace WifiHandler {
 			delay(1000);
 			Serial.printf("Connecting to SSID \"%s\"\n", ssid);
 		}
+
 		Serial.print("Successful. Current IP address: ");
 		Serial.println(WiFi.localIP());
+		Serial.print("Hostname: ");
+		Serial.println(WiFi.getHostname());
 	}
 };	// namespace WifiHandler
 
@@ -51,16 +57,16 @@ void setup() {
 	server.begin();
 }
 
-static int check(const char *path) {
+static int32_t check(const char *path) {
 	if (path[0] == '/')
 		path++;
 
 	/////////////////////////////////////////////
 
-	if (S_EQUALS(path, "TEMP_C"))
+	if (S_EQUALS(path, "TEMP/0/C"))
 		return 1001;
 
-	if (S_EQUALS(path, "STATUS_PAGE"))
+	if (S_EQUALS(path, "index.html"))
 		return 90001;
 
 	return 0;

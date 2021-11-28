@@ -16,9 +16,11 @@ class SimpleServer {
 	WiFiServer server;
 
 	// private functions
-	void httpBadRequest(WiFiClient &client, const char *request);
-	void httpNotFound(WiFiClient &client, const char *path);
-	void httpOK(WiFiClient &client, const char *request);
+	void httpBadRequest400(WiFiClient &client, const char *request);
+	void httpMovedPermanently301(WiFiClient &client, const char *location);
+	void httpNotFound404(WiFiClient &client, const char *path);
+	void httpOK200(WiFiClient &client, const char *request);
+
 	bool readLine(WiFiClient &client, char *buf, size_t len);
 
    public:
@@ -28,7 +30,7 @@ class SimpleServer {
 	// public functions
 	WiFiClient accept();
 	void begin();
-	void handleConnection(WiFiClient &client, int (*check)(const char *), void (*send)(WiFiClient &, const char *, int));
+	void handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int));
 	bool isAvailable(WiFiClient &client);
 };
 
