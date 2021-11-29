@@ -8,8 +8,12 @@
 
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 
-SimpleServer server;
-TSensor tsensor;
+namespace {
+	SimpleServer server;
+	TSensor tsensor;
+
+	TaskHandle_t cpu0_handle;
+}  // namespace
 
 namespace WifiHandler {
 	namespace {	 // "private"
@@ -44,6 +48,8 @@ namespace WifiHandler {
 			Serial.printf("Connecting to SSID \"%s\"\n", ssid);
 		}
 
+		memset(password, 0x00, 65);
+
 		Serial.print("Successful. Current IP address: ");
 		Serial.println(WiFi.localIP());
 		Serial.print("Hostname: ");
@@ -51,10 +57,24 @@ namespace WifiHandler {
 	}
 };	// namespace WifiHandler
 
+static void loop0(void *) {
+	Serial.print("loop0() core: ");
+	Serial.println(xPortGetCoreID());
+
+	while (1) {
+		tsensor.updateAll();
+		delay(5000);
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 	WifiHandler::begin();
 	server.begin();
+	Serial.print("setup() core: ");
+	Serial.println(xPortGetCoreID());
+
+	xTaskCreatePinnedToCore(&loop0, "loop0", 10000, NULL, 0, &cpu0_handle, 0);
 }
 
 static int32_t checkHttp(const char *path) {
@@ -100,7 +120,7 @@ static void sendHttp(WiFiClient &client, const char *path, int code) {
 		try {
 			client.printf("%.2f", tsensor.getCelsius(code - 1000));
 		} catch (int e) {
-			client.print("INVALID READ: -127");
+			client.printf("INVALID READ: %i", e);
 		}
 		return;
 	}
@@ -115,17 +135,20 @@ static void sendHttp(WiFiClient &client, const char *path, int code) {
 
 	switch (code) {
 		case 99901:
-			client.print(
+			client.printf(
 				"<html><head>"
-				"<title>Ventilation Temperature Control</title>"
-				"</head><body>");
+				"<title>%s</title>"
+				"</head><body>",
+				WiFi.getHostname());
 
-			for (uint8_t i = 0; true; i++) {
+			for (size_t i = 0; true; i++) {
 				try {
 					client.printf(
 						"<b>Current Temperature (Sensor %i):</b>   %.2f C, %.2f F<br>",
 						i, tsensor.getCelsius(i), tsensor.getFahrenheit(i));
 				} catch (int e) {
+					if (i == 0)
+						client.print("<b>NO SENSORS AVAILABLE</b>");
 					break;
 				}
 			}
