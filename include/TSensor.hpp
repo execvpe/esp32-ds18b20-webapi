@@ -19,6 +19,7 @@ class TSensor {
 
 	// public functions
 	float getCelsius(uint8_t sensorIdx = 0);
+	float getFahrenheit(uint8_t sensorIdx = 0);
 };
 
 #endif	// TSENSOR_HPP

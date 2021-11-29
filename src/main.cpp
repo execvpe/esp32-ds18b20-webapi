@@ -6,7 +6,7 @@
 #include "decrypt.hpp"
 #include "encData.hpp"
 
-#define CUSTOM_HOSTNAME "ESP32-0-T"
+#define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 
 SimpleServer server;
 TSensor tsensor;
@@ -57,34 +57,80 @@ void setup() {
 	server.begin();
 }
 
-static int32_t check(const char *path) {
+static int32_t checkHttp(const char *path) {
 	if (path[0] == '/')
 		path++;
 
 	/////////////////////////////////////////////
 
-	if (S_EQUALS(path, "TEMP/0/C"))
-		return 1001;
+	if (S_MATCH_FIRST(path, "TEMP/SENSOR_VALUE/", 18)) {
+		const uint8_t max = std::numeric_limits<uint8_t>::max();
+		const char *idxPos = path + 18;
+
+		char *endPtr;
+		long sensorIdx = strtol(idxPos, &endPtr, 10);
+
+		if (idxPos == endPtr || sensorIdx < 0 || sensorIdx > max)
+			return 0;
+
+		if (strlen(endPtr) < 2)	 // at least "/C" or "/F" should be left
+			return 0;
+
+		if (endPtr[0] != '/')
+			return 0;
+
+		switch (endPtr[1]) {
+			case 'C':
+				return 1000 + (int32_t) sensorIdx;
+			case 'F':
+				return 2000 + (int32_t) sensorIdx;
+			default:
+				return 0;
+		}
+	}
 
 	if (S_EQUALS(path, "index.html"))
-		return 90001;
+		return 99901;
 
 	return 0;
 }
 
-static void send(WiFiClient &client, const char *path, int code) {
+static void sendHttp(WiFiClient &client, const char *path, int code) {
+	if (code >= 1000 && code <= 1255) {
+		try {
+			client.printf("%.2f", tsensor.getCelsius(code - 1000));
+		} catch (int e) {
+			client.print("INVALID READ: -127");
+		}
+		return;
+	}
+	if (code >= 2000 && code <= 2255) {
+		try {
+			client.printf("%.2f", tsensor.getFahrenheit(code - 2000));
+		} catch (int e) {
+			client.print("INVALID READ: -127");
+		}
+		return;
+	}
+
 	switch (code) {
-		case 1001:
-			client.printf("%.2f", tsensor.getCelsius());
-			break;
-		case 90001:
-			client.printf(
+		case 99901:
+			client.print(
 				"<html><head>"
 				"<title>Ventilation Temperature Control</title>"
-				"</head><body>"
-				"<b>Current Temperature:</b> %.2f C"
-				"</body></html>",
-				tsensor.getCelsius());
+				"</head><body>");
+
+			for (uint8_t i = 0; true; i++) {
+				try {
+					client.printf(
+						"<b>Current Temperature (Sensor %i):</b>   %.2f C, %.2f F<br>",
+						i, tsensor.getCelsius(i), tsensor.getFahrenheit(i));
+				} catch (int e) {
+					break;
+				}
+			}
+			client.print("</body></html>");
+			break;
 		default:
 			return;
 	}
@@ -94,6 +140,6 @@ void loop() {
 	WiFiClient client = server.accept();
 
 	if (server.isAvailable(client))
-		server.handleConnection(client, &check, &send);
+		server.handleConnection(client, &checkHttp, &sendHttp);
 	client.stop();
 }

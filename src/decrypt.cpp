@@ -12,7 +12,7 @@ static uint8_t sllC(uint8_t value, uint8_t count) {
 }
 
 void decryptShuffled(const uint8_t *__restrict raw, size_t idxPos, char *__restrict buf) {
-	static_assert(CHAR_BIT <= 8, "This function only works with 8-bit characters!");
+	static_assert(CHAR_BIT == 8, "This function only works with 8-bit characters!");
 	const size_t offset = SLLC(raw[idxPos + 1]);
 	const size_t length = (size_t) SLLC(raw[offset]);
 
