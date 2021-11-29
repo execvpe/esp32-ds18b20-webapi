@@ -11,10 +11,9 @@ static void memset_flt(float *mem, float value, size_t size) {
 
 // public constructors
 
-TSensor::TSensor() {
-	oneWire = OneWire(SENSOR_BUS_PIN);
-	sensors = DallasTemperature(&oneWire);
-	sensors.setResolution(12);
+TSensor::TSensor() : oneWire(SENSOR_BUS_PIN), sensors(&oneWire) {
+	//sensors.setResolution(12);
+	//sensors.setWaitForConversion(true);
 	sensors.begin();
 }
 
@@ -24,7 +23,7 @@ float TSensor::readCelsius(uint8_t sensorIdx) {
 
 	for (size_t i = 0; i < 2; i++) {
 		value = sensors.getTempCByIndex(sensorIdx);
-		Serial.printf("Sensor %i - Value : %.2f\r\n", sensorIdx, value);
+		Serial.printf("Sensor %i - Value: %.2f\r\n", sensorIdx, value);
 
 		if (abs(value - INVALID_READ) <= epsilon)
 			throw -127;

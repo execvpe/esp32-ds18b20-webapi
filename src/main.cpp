@@ -57,13 +57,13 @@ namespace WifiHandler {
 	}
 };	// namespace WifiHandler
 
-static void loop0(void *) {
-	Serial.print("loop0() core: ");
+static void setup0(void *) {
+	Serial.print("setup0() core: ");
 	Serial.println(xPortGetCoreID());
 
 	while (1) {
 		tsensor.updateAll();
-		delay(5000);
+		delay(10000);
 	}
 }
 
@@ -74,7 +74,7 @@ void setup() {
 	Serial.print("setup() core: ");
 	Serial.println(xPortGetCoreID());
 
-	xTaskCreatePinnedToCore(&loop0, "loop0", 10000, NULL, 0, &cpu0_handle, 0);
+	xTaskCreatePinnedToCore(&setup0, "setup0", 10000, NULL, 0, &cpu0_handle, 0);
 }
 
 static int32_t checkHttp(const char *path) {
