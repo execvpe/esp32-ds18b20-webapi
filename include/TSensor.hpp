@@ -3,7 +3,7 @@
 #define TSENSOR_HPP
 
 #define SENSOR_BUS_PIN 25
-#define MAX_SENSORS_ON_BUS 5
+#define INVALIDATE_AFTER_SEC 45
 
 #include <DallasTemperature.h>
 #include <OneWire.h>
@@ -13,7 +13,6 @@ class TSensor {
 	// private variables
 	OneWire oneWire;
 	DallasTemperature sensors;
-	float values[MAX_SENSORS_ON_BUS];
 
 	// private functions
 

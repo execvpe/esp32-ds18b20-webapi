@@ -3,10 +3,38 @@
 #define POWER_ON_RST_VALUE (85.0F)
 #define INVALID_READ (-127.0F)
 
-static void memset_flt(float *mem, float value, size_t size) {
-	for (size_t i = 0; i < size; i++) {
-		mem[i] = value;
+#define FLOAT_EQUALS(X, Y) (abs(X - Y) < std::numeric_limits<float>::epsilon())
+
+static void setHead(void *compare, void *value);
+
+struct Reading {
+	float temperature;
+	unsigned long timestamp;
+	size_t index;
+	Reading *next;
+
+	Reading() {
+		Serial.printf("Constructor %f\n", temperature);
+
+		setHead(nullptr, this);
 	}
+
+	~Reading() {
+		Serial.printf("Destructor %f\n", temperature);
+
+		setHead(this, nullptr);
+
+		// "The value of the operand of delete may be a null pointer value."
+		// Delete recursively
+		delete next;
+	}
+};
+
+static Reading *head = nullptr;
+
+static void setHead(void *compare, void *value) {
+	if (head == compare)
+		head = static_cast<Reading *>(value);
 }
 
 // public constructors
@@ -18,18 +46,17 @@ TSensor::TSensor() : oneWire(SENSOR_BUS_PIN), sensors(&oneWire) {
 }
 
 float TSensor::readCelsius(uint8_t sensorIdx) {
-	static float epsilon = std::numeric_limits<float>::epsilon();
 	float value;
 
 	for (size_t i = 0; i < 2; i++) {
 		value = sensors.getTempCByIndex(sensorIdx);
-		Serial.printf("Sensor %i - Value: %.2f\r\n", sensorIdx, value);
+		Serial.printf("Sensor %i - Value: %.2f C\n", sensorIdx, value);
 
-		if (abs(value - INVALID_READ) <= epsilon)
+		if (FLOAT_EQUALS(value, INVALID_READ))
 			throw -127;
-		if (abs(value - POWER_ON_RST_VALUE) > epsilon)
+		if (!FLOAT_EQUALS(value, POWER_ON_RST_VALUE))
 			break;
-		Serial.printf("Sensor %i has RST_VALUE (%.2f C). Reading again...\r\n", sensorIdx, value);
+		Serial.printf("Sensor %i has RST_VALUE (%.2f C). Reading again...\n", sensorIdx, value);
 		sensors.requestTemperaturesByIndex(sensorIdx);
 	}
 
@@ -39,15 +66,13 @@ float TSensor::readCelsius(uint8_t sensorIdx) {
 // public functions
 
 float TSensor::getCelsius(uint8_t sensorIdx) {
-	if (sensorIdx >= MAX_SENSORS_ON_BUS)
-		throw -1;
-
-	float value = values[sensorIdx];
-
-	if (isnan(value))
-		throw -127;
-
-	return value;
+	Reading *current = head;
+	for (size_t idx = 0; current != nullptr; idx++, current = current->next) {
+		if (idx == sensorIdx) {
+			return current->temperature;
+		}
+	}
+	throw -127;
 }
 
 float TSensor::getFahrenheit(uint8_t sensorIdx) {
@@ -55,15 +80,39 @@ float TSensor::getFahrenheit(uint8_t sensorIdx) {
 }
 
 void TSensor::updateAll() {
-	const float nan = std::numeric_limits<float>::quiet_NaN();
 	sensors.requestTemperatures();
-	memset_flt(values, nan, MAX_SENSORS_ON_BUS);
 
-	for (size_t i = 0; i < MAX_SENSORS_ON_BUS; i++) {
+	Reading *drag = nullptr;
+	Reading *current = head;
+	for (size_t idx = 0;; idx++) {
+		float temp;
 		try {
-			values[i] = this->readCelsius(i);
+			temp = this->readCelsius(idx);
 		} catch (int e) {
-			break;
+			if (current && (abs(millis() - current->timestamp) > (INVALIDATE_AFTER_SEC * 1000))) {
+				Serial.println("No longer valid!");
+				delete current;
+				if (drag != nullptr) {
+					drag->next = nullptr;
+				}
+			}
+			return;
 		}
+
+		if (current == nullptr) {
+			current = new Reading();
+			current->next = nullptr;
+		}
+
+		if (drag != nullptr) {
+			drag->next = current;
+		}
+
+		current->temperature = temp;
+		current->timestamp = millis();
+		current->index = idx;
+
+		drag = current;
+		current = current->next;
 	}
 }
