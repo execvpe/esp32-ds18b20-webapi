@@ -39,7 +39,7 @@ static int32_t checkHttp(const char *path) {
 
 	/////////////////////////////////////////////
 
-	if (S_MATCH_FIRST(path, "TEMP/SENSOR_VALUE/", 18)) {
+	if (STRING_STARTS_WITH(path, "TEMP/SENSOR_VALUE/")) {
 		const uint8_t max = std::numeric_limits<uint8_t>::max();
 		const char *idxPos = path + 18;
 
@@ -65,7 +65,7 @@ static int32_t checkHttp(const char *path) {
 		}
 	}
 
-	if (S_EQUALS(path, "index.html"))
+	if (STRING_EQUALS(path, "index.html"))
 		return 99901;
 
 	return 0;

@@ -120,7 +120,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 
 	const char *tokens[3];
 	tokens[0] = strtok(request, " ");
-	if (tokens[0] == NULL || !S_MATCH_FIRST(tokens[0], "GET", 3)) {
+	if (tokens[0] == NULL || !STRING_MATCH_FIRST(tokens[0], "GET", 3)) {
 		httpBadRequest400(client, requestDup);
 		return;
 	}
@@ -128,8 +128,8 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 	tokens[2] = strtok(NULL, " ");
 
 	if (tokens[1] != NULL && tokens[2] != NULL) {
-		if (S_EQUALS(tokens[2], "HTTP/1.0") || S_EQUALS(tokens[2], "HTTP/1.1")) {
-			if (S_EQUALS(tokens[1], "/")) {	 // root directory
+		if (STRING_EQUALS(tokens[2], "HTTP/1.0") || STRING_EQUALS(tokens[2], "HTTP/1.1")) {
+			if (STRING_EQUALS(tokens[1], "/")) {	 // root directory
 				httpMovedPermanently301(client, "/index.html");
 				return;
 			}
