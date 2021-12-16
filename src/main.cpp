@@ -1,61 +1,17 @@
-#include <WiFi.h>
-
 #include "SimpleServer.hpp"
 #include "StringMacros.hpp"
 #include "TSensor.hpp"
-#include "decrypt.hpp"
-#include "encData.hpp"
+#include "WiFiHandler.hpp"
 
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 
-namespace {
+namespace {	 // "static"
+	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
 	SimpleServer server;
 	TSensor tsensor;
 
 	TaskHandle_t cpu0_handle;
 }  // namespace
-
-namespace WifiHandler {
-	namespace {	 // "private"
-#ifdef STATIC_IP
-		IPAddress localIP(172, 28, 116, 0);
-		IPAddress gateway(172, 28, 0, 1);
-		IPAddress subnet(255, 255, 0, 0);
-		IPAddress primaryDNS(172, 28, 0, 1);
-#endif
-	};	// namespace
-
-	void begin() {
-#ifdef CUSTOM_HOSTNAME
-		WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
-		WiFi.setHostname(CUSTOM_HOSTNAME);
-#endif
-#ifdef STATIC_IP
-		if (!WiFi.config(localIP, gateway, subnet, primaryDNS, primaryDNS)) {
-			Serial.println("STA Failed to configure");
-		}
-#endif
-		char ssid[33];
-		char password[65];
-		decryptShuffled(ENCRYPTED_FIELD, 0, ssid);
-		decryptShuffled(ENCRYPTED_FIELD, 1, password);
-
-		Serial.printf("Connecting to SSID \"%s\"\n", ssid);
-
-		WiFi.begin(ssid, password);
-		while (WiFi.status() != WL_CONNECTED) {
-			delay(1000);
-			Serial.printf("Connecting to SSID \"%s\"\n", ssid);
-		}
-
-		memset(password, 0x00, 65);
-
-		Serial.print("Successful. Current IP address: ");
-		Serial.println(WiFi.localIP());
-		Serial.print("Hostname: ");
-		Serial.println(WiFi.getHostname());
-	}
-};	// namespace WifiHandler
 
 static void setup0(void *) {
 	Serial.print("setup0() core: ");
@@ -69,7 +25,7 @@ static void setup0(void *) {
 
 void setup() {
 	Serial.begin(115200);
-	WifiHandler::begin();
+	wifiHandler.begin();
 	server.begin();
 	Serial.print("setup() core: ");
 	Serial.println(xPortGetCoreID());
@@ -139,7 +95,7 @@ static void sendHttp(WiFiClient &client, const char *path, int code) {
 				"<html><head>"
 				"<title>%s</title>"
 				"</head><body>",
-				WiFi.getHostname());
+				CUSTOM_HOSTNAME);
 
 			for (size_t i = 0; true; i++) {
 				try {
