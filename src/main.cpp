@@ -6,6 +6,7 @@
 #include "WiFiHandler.hpp"
 
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
+#define UPDATE_VALUES_EVERY_SEC 10
 
 #define KiB(X) (1024 * X)
 #define GET_BYTE(V, N) ((V >> (8 * N)) & 0xFF)
@@ -22,14 +23,12 @@ namespace {	 // "static"
 }  // namespace
 
 static void setup0(void *) {
-	static constexpr TickType_t delay = 10000;
-
 	Serial.print("setup0() core: ");
 	Serial.println(xPortGetCoreID());
 
 	while (1) {
 		tsensor.updateAll();
-		vTaskDelay(delay / portTICK_RATE_MS);
+		vTaskDelay(((TickType_t) UPDATE_VALUES_EVERY_SEC * 1000) / portTICK_RATE_MS);
 	}
 }
 

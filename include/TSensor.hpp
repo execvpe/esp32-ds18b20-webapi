@@ -2,9 +2,6 @@
 #ifndef TSENSOR_HPP
 #define TSENSOR_HPP
 
-#define SENSOR_BUS_PIN 25
-#define INVALIDATE_AFTER_SEC 45
-
 #include <DallasTemperature.h>
 #include <OneWire.h>
 

@@ -3,6 +3,9 @@
 #include "StringMacros.hpp"
 #include "WebServer.h"
 
+#define CLIENT_TIMEOUT_SEC 5
+#define HTTP_REQUEST_SIZE 256  // max. 8192
+
 namespace HttpHeaders {
 	constexpr char f_badRequest400[] =
 		"HTTP/1.1 400 Bad Request" CRLF
@@ -129,7 +132,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 
 	if (tokens[1] != NULL && tokens[2] != NULL) {
 		if (STRING_EQUALS(tokens[2], "HTTP/1.0") || STRING_EQUALS(tokens[2], "HTTP/1.1")) {
-			if (STRING_EQUALS(tokens[1], "/")) {	 // root directory
+			if (STRING_EQUALS(tokens[1], "/")) {  // root directory
 				httpMovedPermanently301(client, "/index.html");
 				return;
 			}

@@ -5,9 +5,6 @@
 #include <WiFiClient.h>
 #include <WiFiServer.h>
 
-#define CLIENT_TIMEOUT_SEC 5
-#define HTTP_REQUEST_SIZE 256  // max. 8192
-
 #define CRLF "\r\n"
 
 class SimpleServer {

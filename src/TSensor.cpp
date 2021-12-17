@@ -1,5 +1,8 @@
 #include "TSensor.hpp"
 
+#define INVALIDATE_AFTER_SEC 45
+#define SENSOR_BUS_PIN 25
+
 #define POWER_ON_RST_VALUE (85.0F)
 #define INVALID_READ (-127.0F)
 
