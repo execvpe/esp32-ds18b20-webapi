@@ -25,12 +25,21 @@ class TSensor {
 	// public functions
 
 	/**
+    * @brief Request how much time has passed since the last valid reading.
+    * 
+    * @param sensorIdx the index of the sensor.
+    * 
+    * @return unsigned long - the amount in milliseconds.
+    * @throws int (-127) - if the sensor value could not be read.
+    */
+	unsigned long elapsedSince(uint8_t sensorIdx = 0);
+
+	/**
     * @brief Request a sensor value.
     * 
     * @param sensorIdx the index of the sensor.
     * 
     * @return float - the reading in degrees Celsius.
-	* @throws int (-1) - if the index is out of bounce.
     * @throws int (-127) - if the sensor value could not be read.
     */
 	float getCelsius(uint8_t sensorIdx = 0);
@@ -41,7 +50,6 @@ class TSensor {
     * @param sensorIdx the index of the sensor.
     * 
     * @return float - the reading in degrees Fahrenheit.
-	* @throws int (-1) - if the index is out of bounce.
     * @throws int (-127) - if the sensor value could not be read.
     */
 	float getFahrenheit(uint8_t sensorIdx = 0);

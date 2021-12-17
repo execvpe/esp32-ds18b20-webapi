@@ -30,7 +30,7 @@ class SimpleServer {
 	// public functions
 	WiFiClient accept();
 	void begin();
-	void handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int));
+	void handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int32_t));
 	bool isAvailable(WiFiClient &client);
 };
 

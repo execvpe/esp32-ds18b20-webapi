@@ -107,7 +107,7 @@ void SimpleServer::begin() {
 	server.begin();
 }
 
-void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int)) {
+void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int32_t)) {
 	char request[HTTP_REQUEST_SIZE];
 	if (!readLine(client, request, HTTP_REQUEST_SIZE)) {
 		httpBadRequest400(client, request);
@@ -134,7 +134,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 				return;
 			}
 
-			int code = (*check)(tokens[1]);
+			int32_t code = (*check)(tokens[1]);
 			if (!code) {
 				httpNotFound404(client, tokens[1]);
 				return;

@@ -47,18 +47,12 @@ static inline void updateHead(void *compare, void *value) {
 		head = static_cast<Reading *>(value);
 }
 
-// public constructors
-
-TSensor::TSensor() : oneWire(SENSOR_BUS_PIN), sensors(&oneWire) {
-	//sensors.setResolution(12);
-	//sensors.setWaitForConversion(true);
-	sensors.begin();
-}
+// private functions
 
 float TSensor::readCelsius(uint8_t sensorIdx) {
 	float value;
 
-	for (size_t i = 0; i < 2; i++) {
+	for (size_t i = 0; i < 3; i++) {
 		value = sensors.getTempCByIndex(sensorIdx);
 		Serial.printf("Sensor %i - Value: %.2f C\n", sensorIdx, value);
 
@@ -67,22 +61,52 @@ float TSensor::readCelsius(uint8_t sensorIdx) {
 		if (!FLOAT_EQUALS(value, POWER_ON_RST_VALUE))
 			break;
 		Serial.printf("Sensor %i has RST_VALUE (%.2f C). Reading again...\n", sensorIdx, value);
-		sensors.requestTemperaturesByIndex(sensorIdx);
+		sensors.requestTemperatures();
 	}
 
 	return value;
 }
 
+// public constructors
+
+TSensor::TSensor() : oneWire(SENSOR_BUS_PIN), sensors(&oneWire) {
+	//sensors.setResolution(12);
+	//sensors.setWaitForConversion(true);
+	sensors.begin();
+}
+
 // public functions
 
-float TSensor::getCelsius(uint8_t sensorIdx) {
+unsigned long TSensor::elapsedSince(uint8_t sensorIdx) {
+	if (head == nullptr)
+		throw -127;
+
 	Reading *current = head;
-	for (size_t idx = 0; current != nullptr; idx++, current = current->next) {
-		if (idx == sensorIdx) {
-			return current->temperature;
+	for (size_t idx = 0; idx < sensorIdx; idx++) {
+		if (current->next != nullptr) {
+			current = current->next;
+			continue;
 		}
+		throw -127;
 	}
-	throw -127;
+
+	return abs(millis() - current->timestamp);
+}
+
+float TSensor::getCelsius(uint8_t sensorIdx) {
+	if (head == nullptr)
+		throw -127;
+
+	Reading *current = head;
+	for (size_t idx = 0; idx < sensorIdx; idx++) {
+		if (current->next != nullptr) {
+			current = current->next;
+			continue;
+		}
+		throw -127;
+	}
+
+	return current->temperature;
 }
 
 float TSensor::getFahrenheit(uint8_t sensorIdx) {

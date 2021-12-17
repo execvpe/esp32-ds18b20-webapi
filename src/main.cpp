@@ -8,6 +8,10 @@
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 
 #define KiB(X) (1024 * X)
+#define GET_BYTE(V, N) ((V >> (8 * N)) & 0xFF)
+#define SET_BYTE(V, T, N, B)       \
+	V &= ~((T) 0xFF << (8 * (N))); \
+	V |= ((T) (B) << (8 * (N)));
 
 namespace {	 // "static"
 	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
@@ -40,12 +44,13 @@ void setup() {
 }
 
 static int32_t checkHttp(const char *path) {
+	static_assert(CHAR_BIT <= 8, "The return value works with 8-bit characters only!");
 	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
 
 	if (path[0] == '/')
 		path++;
 
-	/////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////
 
 	if (STRING_STARTS_WITH(path, "TEMP/SENSOR_VALUE/")) {
 		STRING_PRUNE_SUBSTRING(path, "TEMP/SENSOR_VALUE/");
@@ -62,66 +67,93 @@ static int32_t checkHttp(const char *path) {
 		if (endPtr[0] != '/')
 			return 0;
 
+		int32_t ret = 0;
+
 		switch (endPtr[1]) {
-			case 'C':
-				return 1000 + (int32_t) sensorIdx;
-			case 'F':
-				return 2000 + (int32_t) sensorIdx;
-			default:
-				return 0;
+			case 'C':							 // Celsius
+				SET_BYTE(ret, int32_t, 3, 'S');	 // Sensor
+				SET_BYTE(ret, int32_t, 1, 'C');	 // Celsius
+				SET_BYTE(ret, int32_t, 0, sensorIdx);
+				return ret;
+			case 'F':							 // Fahrenheit
+				SET_BYTE(ret, int32_t, 3, 'S');	 // Sensor
+				SET_BYTE(ret, int32_t, 1, 'F');	 // Fahrenheit
+				SET_BYTE(ret, int32_t, 0, sensorIdx);
+				return ret;
 		}
+		return 0;
 	}
 
-	if (STRING_EQUALS(path, "index.html"))
-		return 99901;
+	if (STRING_STARTS_WITH(path, "TEMP/MILLIS_ELAPSED/")) {
+		STRING_PRUNE_SUBSTRING(path, "TEMP/MILLIS_ELAPSED/");
+
+		char *endPtr;
+		long sensorIdx = strtol(path, &endPtr, 10);
+
+		if (path == endPtr || sensorIdx < 0 || sensorIdx > u8max)
+			return 0;
+
+		int32_t ret = 0;
+		SET_BYTE(ret, int32_t, 3, 'M');	 // Millis
+		SET_BYTE(ret, int32_t, 0, sensorIdx);
+
+		return ret;
+	}
+
+	if (STRING_EQUALS(path, "index.html")) {
+		int32_t ret = 0;
+		SET_BYTE(ret, int32_t, 3, 'I');	 // Index
+		return ret;
+	}
 
 	return 0;
 }
 
-static void sendHttp(WiFiClient &client, const char *path, int code) {
-	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
+static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
+	try {
+		switch (GET_BYTE(code, 3)) {
+			case 'M':  // Millis
+				client.printf("%lu", tsensor.elapsedSince(GET_BYTE(code, 0)));
+				return;
 
-	if (code >= 1000 && code <= 1000 + u8max) {
-		try {
-			client.printf("%.2f", tsensor.getCelsius(code - 1000));
-		} catch (int e) {
-			client.printf("INVALID READ: %i", e);
-		}
-		return;
-	}
-	if (code >= 2000 && code <= 2000 + u8max) {
-		try {
-			client.printf("%.2f", tsensor.getFahrenheit(code - 2000));
-		} catch (int e) {
-			client.printf("INVALID READ: %i", e);
-		}
-		return;
-	}
-
-	switch (code) {
-		case 99901:
-			client.printf(
-				"<html><head>"
-				"<title>%s</title>"
-				"</head><body>",
-				CUSTOM_HOSTNAME);
-
-			for (size_t i = 0; true; i++) {
-				try {
-					client.printf(
-						"<b>Current Temperature (Sensor %i):</b>   %.2f C, %.2f F<br>",
-						i, tsensor.getCelsius(i), tsensor.getFahrenheit(i));
-				} catch (int e) {
-					if (i == 0)
-						client.print("<b>NO SENSORS AVAILABLE</b>");
-					break;
+			case 'S':  // Sensor
+				switch (GET_BYTE(code, 1)) {
+					case 'C':  // Celsius
+						client.printf("%.2f", tsensor.getCelsius(GET_BYTE(code, 0)));
+						break;
+					case 'F':  // Fahrenheit
+						client.printf("%.2f", tsensor.getFahrenheit(GET_BYTE(code, 0)));
+						break;
 				}
-			}
-			client.print("</body></html>");
-			break;
-		default:
-			return;
+				return;
+			default:
+				break;
+		}
+	} catch (int e) {
+		client.printf("INVALID READ: %i", e);
 	}
+
+	if (GET_BYTE(code, 3) != 'I')
+		return;
+
+	client.printf(
+		"<html><head>"
+		"<title>%s</title>"
+		"</head><body>",
+		CUSTOM_HOSTNAME);
+
+	for (size_t i = 0; true; i++) {
+		try {
+			client.printf(
+				"<b>Current Temperature (Sensor %i):</b>   %.2f C, %.2f F<br>",
+				i, tsensor.getCelsius(i), tsensor.getFahrenheit(i));
+		} catch (int e) {
+			if (i == 0)
+				client.print("<b>NO SENSORS AVAILABLE</b>");
+			break;
+		}
+	}
+	client.print("</body></html>");
 }
 
 void loop() {
