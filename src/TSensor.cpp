@@ -5,24 +5,34 @@
 
 #define FLOAT_EQUALS(X, Y) (abs(X - Y) < std::numeric_limits<float>::epsilon())
 
-static void setHead(void *compare, void *value);
+static inline void updateHead(void *compare, void *value);
 
 struct Reading {
+   private:
+	// private variables
+
+	size_t index;
+
+   public:
+	// public variables
+
 	float temperature;
 	unsigned long timestamp;
-	size_t index;
 	Reading *next;
 
-	Reading() {
-		Serial.printf("Constructor %f\n", temperature);
+	// public constructors
 
-		setHead(nullptr, this);
+	Reading(size_t index) {
+		this->index = index;
+		Serial.printf("Reading-Constructor Pos. %i\n", index);
+
+		updateHead(nullptr, this);
 	}
 
 	~Reading() {
-		Serial.printf("Destructor %f\n", temperature);
+		Serial.printf("Reading-Destructor Pos. %i\n", index);
 
-		setHead(this, nullptr);
+		updateHead(this, nullptr);
 
 		// "The value of the operand of delete may be a null pointer value."
 		// Delete recursively
@@ -32,7 +42,7 @@ struct Reading {
 
 static Reading *head = nullptr;
 
-static void setHead(void *compare, void *value) {
+static inline void updateHead(void *compare, void *value) {
 	if (head == compare)
 		head = static_cast<Reading *>(value);
 }
@@ -90,7 +100,7 @@ void TSensor::updateAll() {
 			temp = this->readCelsius(idx);
 		} catch (int e) {
 			if (current && (abs(millis() - current->timestamp) > (INVALIDATE_AFTER_SEC * 1000))) {
-				Serial.println("No longer valid!");
+				Serial.printf("Value No. %i is no longer valid!\n", idx);
 				delete current;
 				if (drag != nullptr) {
 					drag->next = nullptr;
@@ -100,7 +110,7 @@ void TSensor::updateAll() {
 		}
 
 		if (current == nullptr) {
-			current = new Reading();
+			current = new Reading(idx);
 			current->next = nullptr;
 		}
 
@@ -110,7 +120,6 @@ void TSensor::updateAll() {
 
 		current->temperature = temp;
 		current->timestamp = millis();
-		current->index = idx;
 
 		drag = current;
 		current = current->next;
