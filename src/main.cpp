@@ -1,9 +1,13 @@
+#include <FreeRTOS.h>
+
 #include "SimpleServer.hpp"
 #include "StringMacros.hpp"
 #include "TSensor.hpp"
 #include "WiFiHandler.hpp"
 
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
+
+#define KiB(X) (1024 * X)
 
 namespace {	 // "static"
 	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
@@ -14,12 +18,14 @@ namespace {	 // "static"
 }  // namespace
 
 static void setup0(void *) {
+	static constexpr TickType_t delay = 10000;
+
 	Serial.print("setup0() core: ");
 	Serial.println(xPortGetCoreID());
 
 	while (1) {
 		tsensor.updateAll();
-		delay(10000);
+		vTaskDelay(delay / portTICK_RATE_MS);
 	}
 }
 
@@ -30,23 +36,24 @@ void setup() {
 	Serial.print("setup() core: ");
 	Serial.println(xPortGetCoreID());
 
-	xTaskCreatePinnedToCore(&setup0, "setup0", 10000, NULL, 0, &cpu0_handle, 0);
+	xTaskCreatePinnedToCore(&setup0, "setup0", KiB(32), NULL, 0, &cpu0_handle, 0);
 }
 
 static int32_t checkHttp(const char *path) {
+	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
+
 	if (path[0] == '/')
 		path++;
 
 	/////////////////////////////////////////////
 
 	if (STRING_STARTS_WITH(path, "TEMP/SENSOR_VALUE/")) {
-		const uint8_t max = std::numeric_limits<uint8_t>::max();
-		const char *idxPos = path + 18;
+		STRING_PRUNE_SUBSTRING(path, "TEMP/SENSOR_VALUE/");
 
 		char *endPtr;
-		long sensorIdx = strtol(idxPos, &endPtr, 10);
+		long sensorIdx = strtol(path, &endPtr, 10);
 
-		if (idxPos == endPtr || sensorIdx < 0 || sensorIdx > max)
+		if (path == endPtr || sensorIdx < 0 || sensorIdx > u8max)
 			return 0;
 
 		if (strlen(endPtr) < 2)	 // at least "/C" or "/F" should be left
@@ -72,7 +79,9 @@ static int32_t checkHttp(const char *path) {
 }
 
 static void sendHttp(WiFiClient &client, const char *path, int code) {
-	if (code >= 1000 && code <= 1255) {
+	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
+
+	if (code >= 1000 && code <= 1000 + u8max) {
 		try {
 			client.printf("%.2f", tsensor.getCelsius(code - 1000));
 		} catch (int e) {
@@ -80,11 +89,11 @@ static void sendHttp(WiFiClient &client, const char *path, int code) {
 		}
 		return;
 	}
-	if (code >= 2000 && code <= 2255) {
+	if (code >= 2000 && code <= 2000 + u8max) {
 		try {
 			client.printf("%.2f", tsensor.getFahrenheit(code - 2000));
 		} catch (int e) {
-			client.print("INVALID READ: -127");
+			client.printf("INVALID READ: %i", e);
 		}
 		return;
 	}
