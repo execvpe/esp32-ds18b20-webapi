@@ -6,13 +6,13 @@
 #include "WiFiHandler.hpp"
 
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
-#define UPDATE_VALUES_EVERY_SEC 10
+#define UPDATE_VALUES_EVERY_SEC 15
 
 #define KiB(X) (1024 * X)
-#define GET_BYTE(V, N) ((V >> (8 * N)) & 0xFF)
-#define SET_BYTE(V, T, N, B)       \
-	V &= ~((T) 0xFF << (8 * (N))); \
-	V |= ((T) (B) << (8 * (N)));
+#define GET_BYTE(VARIABLE, POSITION) ((VARIABLE >> (8 * POSITION)) & 0xFF)
+#define SET_BYTE(VARIABLE, DESTINATION_TYPE, POSITION, VALUE)               \
+	VARIABLE &= ~(static_cast<DESTINATION_TYPE>(0xFF) << (8 * (POSITION))); \
+	VARIABLE |= (static_cast<DESTINATION_TYPE>(VALUE) << (8 * (POSITION)));
 
 namespace {	 // "static"
 	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
@@ -42,67 +42,76 @@ void setup() {
 	xTaskCreatePinnedToCore(&setup0, "setup0", KiB(32), NULL, 0, &cpu0_handle, 0);
 }
 
-static int32_t checkHttp(const char *path) {
+static int32_t checkHttp(const char *fullRequest) {
 	static_assert(CHAR_BIT <= 8, "The return value works with 8-bit characters only!");
 	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
 
-	if (path[0] == '/')
-		path++;
+	if (fullRequest[0] == '/')
+		fullRequest++;
 
 	/////////////////////////////////////////////////////////////////////////////
 
-	if (STRING_STARTS_WITH(path, "TEMP/SENSOR_VALUE/")) {
-		STRING_PRUNE_SUBSTRING(path, "TEMP/SENSOR_VALUE/");
+	// Request structure:
+	//
+	// "SENSOR/TEMPERATURE/<n>/VALUE/<unit>"
+	// "SENSOR/TEMPERATURE/<n>/ELAPSED_TIME/<unit>" (for now, unit must be milliseconds: "MS")
+	// "SENSOR/TEMPERATURE/<n>/_ALL/"
 
-		char *endPtr;
-		long sensorIdx = strtol(path, &endPtr, 10);
+	if (STRING_STARTS_WITH(fullRequest, "SENSOR/TEMPERATURE/")) {
+		STRING_PRUNE_SUBSTRING(fullRequest, "SENSOR/TEMPERATURE/");
 
-		if (path == endPtr || sensorIdx < 0 || sensorIdx > u8max)
+		char *requestType;
+		long sensorIdx = strtol(fullRequest, &requestType, 10);
+
+		if (requestType == fullRequest || sensorIdx < 0 || sensorIdx > u8max)
 			return 0;
 
-		if (strlen(endPtr) < 2)	 // at least "/C" or "/F" should be left
+		if (STRING_STARTS_WITH(requestType, "/VALUE/")) {
+			STRING_PRUNE_SUBSTRING(requestType, "/VALUE/");
+
+			if (strlen(requestType) > 1)
+				return 0;
+
+			int32_t returnCode = 0;
+			switch (*requestType) {
+				case 'C':									// Celsius
+					SET_BYTE(returnCode, int32_t, 3, 'V');	// Value
+					SET_BYTE(returnCode, int32_t, 1, 'C');	// Celsius
+					SET_BYTE(returnCode, int32_t, 0, sensorIdx);
+					return returnCode;
+				case 'F':									// Fahrenheit
+					SET_BYTE(returnCode, int32_t, 3, 'V');	// Value
+					SET_BYTE(returnCode, int32_t, 1, 'F');	// Fahrenheit
+					SET_BYTE(returnCode, int32_t, 0, sensorIdx);
+					return returnCode;
+			}
+
 			return 0;
-
-		if (endPtr[0] != '/')
-			return 0;
-
-		int32_t ret = 0;
-
-		switch (endPtr[1]) {
-			case 'C':							 // Celsius
-				SET_BYTE(ret, int32_t, 3, 'S');	 // Sensor
-				SET_BYTE(ret, int32_t, 1, 'C');	 // Celsius
-				SET_BYTE(ret, int32_t, 0, sensorIdx);
-				return ret;
-			case 'F':							 // Fahrenheit
-				SET_BYTE(ret, int32_t, 3, 'S');	 // Sensor
-				SET_BYTE(ret, int32_t, 1, 'F');	 // Fahrenheit
-				SET_BYTE(ret, int32_t, 0, sensorIdx);
-				return ret;
 		}
+
+		if (STRING_EQUALS(requestType, "/ELAPSED_TIME/MS")) {
+			int32_t returnCode = 0;
+			SET_BYTE(returnCode, int32_t, 3, 'E');	// Elapsed time
+			SET_BYTE(returnCode, int32_t, 0, sensorIdx);
+
+			return returnCode;
+		}
+
+		if (STRING_EQUALS(requestType, "/_ALL")) {
+			int32_t returnCode = 0;
+			SET_BYTE(returnCode, int32_t, 3, 'A');	// All
+			SET_BYTE(returnCode, int32_t, 0, sensorIdx);
+
+			return returnCode;
+		}
+
 		return 0;
 	}
 
-	if (STRING_STARTS_WITH(path, "TEMP/MILLIS_ELAPSED/")) {
-		STRING_PRUNE_SUBSTRING(path, "TEMP/MILLIS_ELAPSED/");
-
-		char *endPtr;
-		long sensorIdx = strtol(path, &endPtr, 10);
-
-		if (path == endPtr || sensorIdx < 0 || sensorIdx > u8max)
-			return 0;
-
-		int32_t ret = 0;
-		SET_BYTE(ret, int32_t, 3, 'M');	 // Millis
-		SET_BYTE(ret, int32_t, 0, sensorIdx);
-
-		return ret;
-	}
-
-	if (STRING_EQUALS(path, "index.html")) {
-		int32_t ret = 0;
-		SET_BYTE(ret, int32_t, 3, 'I');	 // Index
-		return ret;
+	if (STRING_EQUALS(fullRequest, "index.html")) {
+		int32_t returnCode = 0;
+		SET_BYTE(returnCode, int32_t, 3, 'I');	// Index
+		return returnCode;
 	}
 
 	return 0;
@@ -111,11 +120,17 @@ static int32_t checkHttp(const char *path) {
 static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 	try {
 		switch (GET_BYTE(code, 3)) {
-			case 'M':  // Millis
+			case 'A':  // All
+				client.printf("%.2f C\n", tsensor.getCelsius(GET_BYTE(code, 0)));
+				client.printf("%.2f F\n", tsensor.getFahrenheit(GET_BYTE(code, 0)));
+				client.printf("%lu MS", tsensor.elapsedSince(GET_BYTE(code, 0)));
+				return;
+
+			case 'E':  // Elapsed time
 				client.printf("%lu", tsensor.elapsedSince(GET_BYTE(code, 0)));
 				return;
 
-			case 'S':  // Sensor
+			case 'V':  // Value
 				switch (GET_BYTE(code, 1)) {
 					case 'C':  // Celsius
 						client.printf("%.2f", tsensor.getCelsius(GET_BYTE(code, 0)));
