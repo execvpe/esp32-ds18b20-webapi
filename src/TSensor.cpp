@@ -8,6 +8,8 @@
 
 #define FLOAT_EQUALS(X, Y) (abs(X - Y) < std::numeric_limits<float>::epsilon())
 
+#define VTASK_DELAY(MS) (vTaskDelay(((TickType_t) (MS)) / portTICK_RATE_MS))
+
 static inline void updateHead(void *compare, void *value);
 
 struct Reading {
@@ -55,17 +57,27 @@ static inline void updateHead(void *compare, void *value) {
 float TSensor::readCelsius(uint8_t sensorIdx) {
 	float value;
 
-	for (size_t i = 0; i < 3; i++) {
+	for (size_t i = 0; i < 5; i++) {
 		value = sensors.getTempCByIndex(sensorIdx);
 		Serial.printf("Sensor %i - Value: %.2f C\n", sensorIdx, value);
 
-		if (FLOAT_EQUALS(value, INVALID_READ))
-			throw -127;
+		if (FLOAT_EQUALS(value, INVALID_READ)) {
+			Serial.printf("[%i] Sensor %i: INVALID_READ (%.2f C). Reading again...\n",
+						  i, sensorIdx, value);
+			VTASK_DELAY(500);
+			sensors.requestTemperatures();
+			VTASK_DELAY(500);
+			continue;
+		}
 		if (!FLOAT_EQUALS(value, POWER_ON_RST_VALUE))
 			break;
-		Serial.printf("Sensor %i has RST_VALUE (%.2f C). Reading again...\n", sensorIdx, value);
+		Serial.printf("[%i] Sensor %i: POWER_ON_RST_VALUE (%.2f C). Reading again...\n",
+					  i, sensorIdx, value);
 		sensors.requestTemperatures();
 	}
+
+	if (FLOAT_EQUALS(value, INVALID_READ))
+		throw -127;
 
 	return value;
 }

@@ -8,6 +8,8 @@
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 #define UPDATE_VALUES_EVERY_SEC 15
 
+#define VTASK_DELAY(MS) (vTaskDelay(((TickType_t) (MS)) / portTICK_RATE_MS))
+
 #define KiB(X) (1024 * X)
 #define GET_BYTE(VARIABLE, POSITION) ((VARIABLE >> (8 * POSITION)) & 0xFF)
 #define SET_BYTE(VARIABLE, DESTINATION_TYPE, POSITION, VALUE)               \
@@ -28,7 +30,7 @@ static void setup0(void *) {
 
 	while (1) {
 		tsensor.updateAll();
-		vTaskDelay(((TickType_t) UPDATE_VALUES_EVERY_SEC * 1000) / portTICK_RATE_MS);
+		VTASK_DELAY(UPDATE_VALUES_EVERY_SEC * 1000);
 	}
 }
 
