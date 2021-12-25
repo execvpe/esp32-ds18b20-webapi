@@ -1,7 +1,7 @@
 #include "decrypt.hpp"
 
-#include <limits.h>	 // for CHAR_BIT
-#include <stdint.h>	 // for uint8_t
+#include <climits>	// for CHAR_BIT
+#include <cstdint>	// for uint8_t
 
 #define SLLC(V) sllC(V, 3)
 

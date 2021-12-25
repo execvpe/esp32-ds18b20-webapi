@@ -2,7 +2,7 @@
 #ifndef DYNAMIC_ARRAY_HPP
 #define DYNAMIC_ARRAY_HPP
 
-#include <stddef.h>
+#include <cstddef>
 
 template <typename E>
 class DynamicArray {

@@ -2,8 +2,8 @@
 #ifndef DECRYPT_HPP
 #define DECRYPT_HPP
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 void decryptShuffled(const uint8_t *__restrict raw, size_t idxPos, char *__restrict buf);
 
