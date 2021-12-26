@@ -27,7 +27,7 @@ class DynamicArray {
 
 	// public functions
 
-	size_t size();
+	size_t getSize();
 };
 
 #include "DynamicArray.tpp"

@@ -1,10 +1,12 @@
 #include <FreeRTOS.h>
 
+#include "Actors.hpp"
 #include "SimpleServer.hpp"
 #include "StringMacros.hpp"
 #include "TSensor.hpp"
 #include "WiFiHandler.hpp"
 
+#define BUZZER_PIN 14
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 #define UPDATE_VALUES_EVERY_SEC 15
 
@@ -17,17 +19,16 @@
 	VARIABLE |= (static_cast<DESTINATION_TYPE>(VALUE) << (8 * (POSITION)));
 
 namespace {	 // "static"
-	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
+	Actors actors;
+
 	SimpleServer server;
 	TSensor tsensor;
+	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
 
 	TaskHandle_t cpu0_handle;
 }  // namespace
 
 static void setup0(void *) {
-	Serial.print("setup0() core: ");
-	Serial.println(xPortGetCoreID());
-
 	while (1) {
 		tsensor.updateAll();
 		VTASK_DELAY(UPDATE_VALUES_EVERY_SEC * 1000);
@@ -36,20 +37,31 @@ static void setup0(void *) {
 
 void setup() {
 	Serial.begin(115200);
+	actors.add(BUZZER_PIN);
 	wifiHandler.begin();
 	server.begin();
-	Serial.print("setup() core: ");
-	Serial.println(xPortGetCoreID());
 
 	xTaskCreatePinnedToCore(&setup0, "setup0", KiB(32), NULL, 0, &cpu0_handle, 0);
 }
 
-static int32_t checkHttp(const char *fullRequest) {
+static int32_t checkHttp(const char *path) {
 	static_assert(CHAR_BIT <= 8, "The return value works with 8-bit characters only!");
 	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
 
-	if (fullRequest[0] == '/')
-		fullRequest++;
+	const char *fullRequest;
+	{
+		size_t len = strlen(path);
+		char buf[len + 1];
+		int endPos = snprintf(buf, len + 1, "%s", path);
+
+		if (buf[endPos - 1] == '/')
+			buf[endPos - 1] = '\0';
+
+		fullRequest = buf;
+
+		if (fullRequest[0] == '/')
+			fullRequest++;
+	}
 
 	/////////////////////////////////////////////////////////////////////////////
 
@@ -68,14 +80,16 @@ static int32_t checkHttp(const char *fullRequest) {
 		if (requestType == fullRequest || sensorIdx < 0 || sensorIdx > u8max)
 			return 0;
 
-		if (STRING_STARTS_WITH(requestType, "/VALUE/")) {
-			STRING_PRUNE_SUBSTRING(requestType, "/VALUE/");
+		fullRequest = requestType;
 
-			if (strlen(requestType) > 1)
+		if (STRING_STARTS_WITH(fullRequest, "/VALUE/")) {
+			STRING_PRUNE_SUBSTRING(fullRequest, "/VALUE/");
+
+			if (*fullRequest != '\0')
 				return 0;
 
 			int32_t returnCode = 0;
-			switch (*requestType) {
+			switch (*fullRequest) {
 				case 'C':									// Celsius
 					SET_BYTE(returnCode, int32_t, 3, 'V');	// Value
 					SET_BYTE(returnCode, int32_t, 1, 'C');	// Celsius
@@ -91,7 +105,7 @@ static int32_t checkHttp(const char *fullRequest) {
 			return 0;
 		}
 
-		if (STRING_EQUALS(requestType, "/ELAPSED_TIME/MS")) {
+		if (STRING_EQUALS(fullRequest, "/ELAPSED_TIME/MS")) {
 			int32_t returnCode = 0;
 			SET_BYTE(returnCode, int32_t, 3, 'E');	// Elapsed time
 			SET_BYTE(returnCode, int32_t, 0, sensorIdx);
@@ -99,10 +113,70 @@ static int32_t checkHttp(const char *fullRequest) {
 			return returnCode;
 		}
 
-		if (STRING_EQUALS(requestType, "/_ALL")) {
+		if (STRING_EQUALS(fullRequest, "/_ALL")) {
 			int32_t returnCode = 0;
 			SET_BYTE(returnCode, int32_t, 3, 'A');	// All
 			SET_BYTE(returnCode, int32_t, 0, sensorIdx);
+
+			return returnCode;
+		}
+
+		return 0;
+	}
+
+	// Request structure:
+	//
+	// "ACTOR/BUZZER/<n>/OFF"
+	// "ACTOR/BUZZER/<n>/ON[/<value>]" (unit: milliseconds)
+
+	if (STRING_STARTS_WITH(fullRequest, "ACTOR/BUZZER/")) {
+		STRING_PRUNE_SUBSTRING(fullRequest, "ACTOR/BUZZER/");
+
+		char *newState;
+		long buzzerIdx = strtol(fullRequest, &newState, 10);
+
+		if (newState == fullRequest || buzzerIdx < 0 || buzzerIdx > u8max)
+			return 0;
+
+		fullRequest = newState;
+
+		if (STRING_EQUALS(fullRequest, "/OFF")) {
+			int32_t returnCode = 0;
+			SET_BYTE(returnCode, int32_t, 3, 'B');	// Buzzer
+			SET_BYTE(returnCode, int32_t, 1, 0);	// Off
+			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
+
+			actors.set(buzzerIdx, ACTOR_INACTIVE);
+
+			return returnCode;
+		}
+
+		if (STRING_STARTS_WITH(fullRequest, "/ON")) {
+			STRING_PRUNE_SUBSTRING(fullRequest, "/ON");
+
+			if (*fullRequest == '\0') {
+				int32_t returnCode = 0;
+				SET_BYTE(returnCode, int32_t, 3, 'B');	// Buzzer
+				SET_BYTE(returnCode, int32_t, 1, 1);	// On
+				SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
+
+				actors.set(buzzerIdx, ACTOR_ACTIVE);
+
+				return returnCode;
+			}
+
+			char *endPtr;
+			long duration = strtol(++fullRequest, &endPtr, 10);
+
+			if (endPtr == fullRequest || duration <= 0 || *endPtr != '\0')
+				return 0;
+
+			int32_t returnCode = 0;
+			SET_BYTE(returnCode, int32_t, 3, 'B');	// Buzzer
+			SET_BYTE(returnCode, int32_t, 1, 'S');	// Signal
+			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
+
+			actors.signal(buzzerIdx, ACTOR_ACTIVE, duration);
 
 			return returnCode;
 		}
@@ -126,6 +200,21 @@ static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 				client.printf("%.2f C\n", tsensor.getCelsius(GET_BYTE(code, 0)));
 				client.printf("%.2f F\n", tsensor.getFahrenheit(GET_BYTE(code, 0)));
 				client.printf("%lu MS", tsensor.elapsedSince(GET_BYTE(code, 0)));
+				return;
+
+			case 'B':
+				const char *state;
+				switch (GET_BYTE(code, 1)) {
+					case 0:
+						state = "OFF";
+						break;
+					case 1:
+						state = "ON";
+						break;
+					default:
+						state = "BEEP/SIGNAL";
+				}
+				client.printf("OK. Buzzer %i: %s", GET_BYTE(code, 0), state);
 				return;
 
 			case 'E':  // Elapsed time

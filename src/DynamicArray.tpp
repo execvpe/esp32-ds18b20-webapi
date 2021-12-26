@@ -21,7 +21,7 @@ void DynamicArray<E>::checkAlloc(size_t requestedSize) {
 	if (data == nullptr)
 		abort();
 
-	memset(data + oldSize, NULL, (size - oldSize) * sizeof(E));
+	memset(data + oldSize, 0x0, (size - oldSize) * sizeof(E));
 }
 
 // public constructors
@@ -60,6 +60,6 @@ E& DynamicArray<E>::operator[](size_t idx) {
 // public functions
 
 template <typename E>
-size_t DynamicArray<E>::size() {
+size_t DynamicArray<E>::getSize() {
 	return size;
 }
