@@ -24,6 +24,10 @@ class DynamicArray {
 
 	// public operators
 	E& operator[](size_t idx);
+
+	// public functions
+
+	size_t size();
 };
 
 #include "DynamicArray.tpp"
