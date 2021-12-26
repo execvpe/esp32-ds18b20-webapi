@@ -17,7 +17,7 @@ class TSensor {
 
    public:
 	// public constructors
-	TSensor();
+	TSensor(uint8_t busPin);
 
 	// public functions
 

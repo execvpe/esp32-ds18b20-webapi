@@ -1,7 +1,6 @@
 #include "TSensor.hpp"
 
 #define INVALIDATE_AFTER_SEC 45
-#define SENSOR_BUS_PIN 25
 
 #define POWER_ON_RST_VALUE (85.0F)
 #define INVALID_READ (-127.0F)
@@ -29,13 +28,13 @@ struct Reading {
 
 	Reading(size_t index) {
 		this->index = index;
-		Serial.printf("Reading-Constructor Pos. %i\n", index);
+		//Serial.printf("Reading-Constructor Pos. %i\n", index);
 
 		updateHead(nullptr, this);
 	}
 
 	~Reading() {
-		Serial.printf("Reading-Destructor Pos. %i\n", index);
+		//Serial.printf("Reading-Destructor Pos. %i\n", index);
 
 		updateHead(this, nullptr);
 
@@ -57,34 +56,38 @@ static inline void updateHead(void *compare, void *value) {
 float TSensor::readCelsius(uint8_t sensorIdx) {
 	float value;
 
-	for (size_t i = 0; i < 5; i++) {
+	for (size_t i = 0; i < 3; i++) {
 		value = sensors.getTempCByIndex(sensorIdx);
-		Serial.printf("Sensor %i - Value: %.2f C\n", sensorIdx, value);
 
 		if (FLOAT_EQUALS(value, INVALID_READ)) {
 			Serial.printf("[%i] Sensor %i: INVALID_READ (%.2f C). Reading again...\n",
 						  i, sensorIdx, value);
-			VTASK_DELAY(500);
+			VTASK_DELAY(100);
 			sensors.requestTemperatures();
-			VTASK_DELAY(500);
+			VTASK_DELAY(1200);
 			continue;
 		}
 		if (!FLOAT_EQUALS(value, POWER_ON_RST_VALUE))
 			break;
+
 		Serial.printf("[%i] Sensor %i: POWER_ON_RST_VALUE (%.2f C). Reading again...\n",
 					  i, sensorIdx, value);
+		VTASK_DELAY(100);
 		sensors.requestTemperatures();
+		VTASK_DELAY(1200);
 	}
 
 	if (FLOAT_EQUALS(value, INVALID_READ))
 		throw -127;
+
+	Serial.printf("Sensor %i - Value: %.2f C\n", sensorIdx, value);
 
 	return value;
 }
 
 // public constructors
 
-TSensor::TSensor() : oneWire(SENSOR_BUS_PIN), sensors(&oneWire) {
+TSensor::TSensor(uint8_t busPin) : oneWire(busPin), sensors(&oneWire) {
 	//sensors.setResolution(12);
 	//sensors.setWaitForConversion(true);
 	sensors.begin();

@@ -7,6 +7,8 @@
 #include "WiFiHandler.hpp"
 
 #define BUZZER_PIN 14
+#define TEMP_SENSOR_PIN 25
+
 #define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
 #define UPDATE_VALUES_EVERY_SEC 15
 
@@ -22,47 +24,29 @@ namespace {	 // "static"
 	Actors actors;
 
 	SimpleServer server;
-	TSensor tsensor;
+	TSensor tsensor(TEMP_SENSOR_PIN);
 	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
 
 	TaskHandle_t cpu0_handle;
 }  // namespace
 
-static void setup0(void *) {
-	while (1) {
-		tsensor.updateAll();
-		VTASK_DELAY(UPDATE_VALUES_EVERY_SEC * 1000);
-	}
-}
-
-void setup() {
-	Serial.begin(115200);
-	actors.add(BUZZER_PIN);
-	wifiHandler.begin();
-	server.begin();
-
-	xTaskCreatePinnedToCore(&setup0, "setup0", KiB(32), NULL, 0, &cpu0_handle, 0);
-}
-
-static int32_t checkHttp(const char *path) {
+static int32_t checkHttp(const char *const path) {
 	static_assert(CHAR_BIT <= 8, "The return value works with 8-bit characters only!");
 	static constexpr uint8_t u8max = std::numeric_limits<uint8_t>::max();
 
-	const char *fullRequest;
+	char *fullRequest;
+	char pathDup[strlen(path) + 1];
 	{
-		size_t len = strlen(path);
-		char buf[len + 1];
-		int endPos = snprintf(buf, len + 1, "%s", path);
+		int endPos = snprintf(pathDup, strlen(path) + 1, "%s", path);
 
-		if (buf[endPos - 1] == '/')
-			buf[endPos - 1] = '\0';
+		if (pathDup[endPos - 1] == '/')
+			pathDup[endPos - 1] = '\0';
 
-		fullRequest = buf;
+		fullRequest = pathDup;
 
 		if (fullRequest[0] == '/')
 			fullRequest++;
 	}
-
 	/////////////////////////////////////////////////////////////////////////////
 
 	// Request structure:
@@ -85,7 +69,7 @@ static int32_t checkHttp(const char *path) {
 		if (STRING_STARTS_WITH(fullRequest, "/VALUE/")) {
 			STRING_PRUNE_SUBSTRING(fullRequest, "/VALUE/");
 
-			if (*fullRequest != '\0')
+			if (strlen(fullRequest) > 1)
 				return 0;
 
 			int32_t returnCode = 0;
@@ -261,10 +245,28 @@ static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 	client.print("</body></html>");
 }
 
-void loop() {
-	WiFiClient client = server.accept();
+// Running on Core 0 (Protocol CPU) along with WiFi, etc.
+static void setup0(void *) {
+	while (1) {
+		WiFiClient client = server.accept();
 
-	if (server.isAvailable(client))
-		server.handleConnection(client, &checkHttp, &sendHttp);
-	client.stop();
+		if (server.isAvailable(client))
+			server.handleConnection(client, &checkHttp, &sendHttp);
+		client.stop();
+	}
+}
+
+void setup() {
+	Serial.begin(115200);
+	actors.add(BUZZER_PIN);
+	wifiHandler.begin();
+	server.begin();
+
+	xTaskCreatePinnedToCore(&setup0, "setup0", KiB(32), NULL, 1, &cpu0_handle, 0);
+}
+
+// Running on Core 1 (Application CPU)
+void loop() {
+	tsensor.updateAll();
+	VTASK_DELAY(UPDATE_VALUES_EVERY_SEC * 1000);
 }

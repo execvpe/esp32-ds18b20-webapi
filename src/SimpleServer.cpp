@@ -1,7 +1,8 @@
 #include "SimpleServer.hpp"
 
+#include <WebServer.h>
+
 #include "StringMacros.hpp"
-#include "WebServer.h"
 
 #define CLIENT_TIMEOUT_SEC 5
 #define HTTP_REQUEST_SIZE 256  // max. 8192
@@ -100,6 +101,7 @@ SimpleServer::SimpleServer() : server(80){};
 WiFiClient SimpleServer::accept() {
 	while (1) {
 		WiFiClient client = server.available();
+		delay(1);
 
 		if (client)
 			return client;
@@ -138,7 +140,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 			}
 
 			int32_t code = (*check)(tokens[1]);
-			if (!code) {
+			if (code == 0) {
 				httpNotFound404(client, tokens[1]);
 				return;
 			}
