@@ -124,13 +124,14 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 	memcpy(requestDup, request, len);
 
 	const char *tokens[3];
-	tokens[0] = strtok(request, " ");
+	char *saveptr = NULL;
+	tokens[0] = strtok_r(request, " ", &saveptr);
 	if (tokens[0] == NULL || !STRING_MATCH_FIRST(tokens[0], "GET", 3)) {
 		httpBadRequest400(client, requestDup);
 		return;
 	}
-	tokens[1] = strtok(NULL, " ");
-	tokens[2] = strtok(NULL, " ");
+	tokens[1] = strtok_r(NULL, " ", &saveptr);
+	tokens[2] = strtok_r(NULL, " ", &saveptr);
 
 	if (tokens[1] != NULL && tokens[2] != NULL) {
 		if (STRING_EQUALS(tokens[2], "HTTP/1.0") || STRING_EQUALS(tokens[2], "HTTP/1.1")) {
@@ -159,7 +160,7 @@ bool SimpleServer::isAvailable(WiFiClient &client) {
 	unsigned long previousTime = currentTime;
 
 	while (client.connected()) {
-		if ((currentTime - previousTime) > (CLIENT_TIMEOUT_SEC * 1000))
+		if (abs(currentTime - previousTime) > (CLIENT_TIMEOUT_SEC * 1000))
 			return false;
 
 		currentTime = millis();
