@@ -11,6 +11,7 @@ class WiFiHandler {
 	// public functions
 
 	void begin();
+	void checkActiveConnection();
 };
 
 #endif	// WIFIHANDLER_HPP
