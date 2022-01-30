@@ -48,3 +48,9 @@ e.g. ```GET SENSOR/TEMPERATURE/0/VALUE/C HTTP/1.1```
 ```
 OK. Buzzer <n>: OFF|ON|BEEP/SIGNAL
 ```
+
+## Licensing
+
+Any files not written by me, I release under the license under which they were originally released. If the licenses of the third-party code are not explicitly stated in the file *CONTRIBUTORS.md* or the third-party files themselves, please contact the original author for more information on the license used.
+
+My code is released under the global project license in *LICENSE*.
