@@ -6,19 +6,20 @@
 #include "TSensor.hpp"
 #include "WiFiHandler.hpp"
 
-#define BUZZER_PIN 14
+#define BUZZER_PIN      14
 #define TEMP_SENSOR_PIN 25
 
-#define CUSTOM_HOSTNAME "VentControl-ESP32-116-0"
+#define CUSTOM_HOSTNAME         "VentControl-ESP32-116-0"
 #define UPDATE_VALUES_EVERY_SEC 15
 
 #define KiB(X) (1024 * X)
+
 #define GET_BYTE(VARIABLE, POSITION) ((VARIABLE >> (8 * POSITION)) & 0xFF)
 #define SET_BYTE(VARIABLE, DESTINATION_TYPE, POSITION, VALUE)               \
 	VARIABLE &= ~(static_cast<DESTINATION_TYPE>(0xFF) << (8 * (POSITION))); \
 	VARIABLE |= (static_cast<DESTINATION_TYPE>(VALUE) << (8 * (POSITION)));
 
-namespace {	 // "static"
+namespace { // "static"
 	Actors actors;
 
 	SimpleServer server;
@@ -26,7 +27,7 @@ namespace {	 // "static"
 	WiFiHandler wifiHandler(CUSTOM_HOSTNAME);
 
 	TaskHandle_t cpu0_handle;
-}  // namespace
+} // namespace
 
 static int32_t checkHttp(const char *const path) {
 	static_assert(CHAR_BIT <= 8, "The return value works with 8-bit characters only!");
@@ -72,14 +73,14 @@ static int32_t checkHttp(const char *const path) {
 
 			int32_t returnCode = 0;
 			switch (*fullRequest) {
-				case 'C':									// Celsius
-					SET_BYTE(returnCode, int32_t, 3, 'V');	// Value
-					SET_BYTE(returnCode, int32_t, 1, 'C');	// Celsius
+				case 'C':                                  // Celsius
+					SET_BYTE(returnCode, int32_t, 3, 'V'); // Value
+					SET_BYTE(returnCode, int32_t, 1, 'C'); // Celsius
 					SET_BYTE(returnCode, int32_t, 0, sensorIdx);
 					return returnCode;
-				case 'F':									// Fahrenheit
-					SET_BYTE(returnCode, int32_t, 3, 'V');	// Value
-					SET_BYTE(returnCode, int32_t, 1, 'F');	// Fahrenheit
+				case 'F':                                  // Fahrenheit
+					SET_BYTE(returnCode, int32_t, 3, 'V'); // Value
+					SET_BYTE(returnCode, int32_t, 1, 'F'); // Fahrenheit
 					SET_BYTE(returnCode, int32_t, 0, sensorIdx);
 					return returnCode;
 			}
@@ -89,7 +90,7 @@ static int32_t checkHttp(const char *const path) {
 
 		if (STRING_EQUALS(fullRequest, "/ELAPSED_TIME/MS")) {
 			int32_t returnCode = 0;
-			SET_BYTE(returnCode, int32_t, 3, 'E');	// Elapsed time
+			SET_BYTE(returnCode, int32_t, 3, 'E'); // Elapsed time
 			SET_BYTE(returnCode, int32_t, 0, sensorIdx);
 
 			return returnCode;
@@ -97,7 +98,7 @@ static int32_t checkHttp(const char *const path) {
 
 		if (STRING_EQUALS(fullRequest, "/_ALL")) {
 			int32_t returnCode = 0;
-			SET_BYTE(returnCode, int32_t, 3, 'A');	// All
+			SET_BYTE(returnCode, int32_t, 3, 'A'); // All
 			SET_BYTE(returnCode, int32_t, 0, sensorIdx);
 
 			return returnCode;
@@ -124,8 +125,8 @@ static int32_t checkHttp(const char *const path) {
 
 		if (STRING_EQUALS(fullRequest, "/OFF")) {
 			int32_t returnCode = 0;
-			SET_BYTE(returnCode, int32_t, 3, 'B');	// Buzzer
-			SET_BYTE(returnCode, int32_t, 1, 0);	// Off
+			SET_BYTE(returnCode, int32_t, 3, 'B'); // Buzzer
+			SET_BYTE(returnCode, int32_t, 1, 0);   // Off
 			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
 
 			actors.set(buzzerIdx, ACTOR_INACTIVE);
@@ -138,8 +139,8 @@ static int32_t checkHttp(const char *const path) {
 
 			if (*fullRequest == '\0') {
 				int32_t returnCode = 0;
-				SET_BYTE(returnCode, int32_t, 3, 'B');	// Buzzer
-				SET_BYTE(returnCode, int32_t, 1, 1);	// On
+				SET_BYTE(returnCode, int32_t, 3, 'B'); // Buzzer
+				SET_BYTE(returnCode, int32_t, 1, 1);   // On
 				SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
 
 				actors.set(buzzerIdx, ACTOR_ACTIVE);
@@ -154,8 +155,8 @@ static int32_t checkHttp(const char *const path) {
 				return 0;
 
 			int32_t returnCode = 0;
-			SET_BYTE(returnCode, int32_t, 3, 'B');	// Buzzer
-			SET_BYTE(returnCode, int32_t, 1, 'S');	// Signal
+			SET_BYTE(returnCode, int32_t, 3, 'B'); // Buzzer
+			SET_BYTE(returnCode, int32_t, 1, 'S'); // Signal
 			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
 
 			actors.signal(buzzerIdx, ACTOR_ACTIVE, duration);
@@ -168,7 +169,7 @@ static int32_t checkHttp(const char *const path) {
 
 	if (STRING_EQUALS(fullRequest, "index.html")) {
 		int32_t returnCode = 0;
-		SET_BYTE(returnCode, int32_t, 3, 'I');	// Index
+		SET_BYTE(returnCode, int32_t, 3, 'I'); // Index
 		return returnCode;
 	}
 
@@ -178,7 +179,7 @@ static int32_t checkHttp(const char *const path) {
 static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 	try {
 		switch (GET_BYTE(code, 3)) {
-			case 'A':  // All
+			case 'A': // All
 				client.printf("%.2f C\n", tsensor.getCelsius(GET_BYTE(code, 0)));
 				client.printf("%.2f F\n", tsensor.getFahrenheit(GET_BYTE(code, 0)));
 				client.printf("%lu MS", tsensor.elapsedSince(GET_BYTE(code, 0)));
@@ -199,16 +200,16 @@ static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 				client.printf("OK. Buzzer %i: %s", GET_BYTE(code, 0), state);
 				return;
 
-			case 'E':  // Elapsed time
+			case 'E': // Elapsed time
 				client.printf("%lu", tsensor.elapsedSince(GET_BYTE(code, 0)));
 				return;
 
-			case 'V':  // Value
+			case 'V': // Value
 				switch (GET_BYTE(code, 1)) {
-					case 'C':  // Celsius
+					case 'C': // Celsius
 						client.printf("%.2f", tsensor.getCelsius(GET_BYTE(code, 0)));
 						break;
-					case 'F':  // Fahrenheit
+					case 'F': // Fahrenheit
 						client.printf("%.2f", tsensor.getFahrenheit(GET_BYTE(code, 0)));
 						break;
 				}
@@ -216,24 +217,20 @@ static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 			default:
 				break;
 		}
-	} catch (int e) {
-		client.printf("INVALID READ: %i", e);
-	}
+	} catch (int e) { client.printf("INVALID READ: %i", e); }
 
 	if (GET_BYTE(code, 3) != 'I')
 		return;
 
-	client.printf(
-		"<html><head>"
-		"<title>%s</title>"
-		"</head><body>",
-		CUSTOM_HOSTNAME);
+	client.printf("<html><head>"
+				  "<title>%s</title>"
+				  "</head><body>",
+				  CUSTOM_HOSTNAME);
 
 	for (size_t i = 0; true; i++) {
 		try {
-			client.printf(
-				"<b>Current Temperature (Sensor %i):</b>   %.2f C, %.2f F<br>",
-				i, tsensor.getCelsius(i), tsensor.getFahrenheit(i));
+			client.printf("<b>Current Temperature (Sensor %i):</b>   %.2f C, %.2f F<br>", i, tsensor.getCelsius(i),
+						  tsensor.getFahrenheit(i));
 		} catch (int e) {
 			if (i == 0)
 				client.print("<b>NO SENSORS AVAILABLE</b>");

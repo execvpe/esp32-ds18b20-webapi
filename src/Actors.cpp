@@ -16,7 +16,7 @@ actor_t Actors::add(uint8_t actorPin, uint8_t initialLevel) {
 	pinMode(actorPin, OUTPUT);
 	digitalWrite(actorPin, initialLevel);
 
-    return count++;
+	return count++;
 }
 
 void Actors::signal(actor_t actor, uint8_t level, uint32_t period) {

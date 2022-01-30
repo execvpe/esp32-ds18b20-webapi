@@ -8,7 +8,7 @@
 
 #include "DynamicArray.hpp"
 
-#define ACTOR_ACTIVE HIGH
+#define ACTOR_ACTIVE   HIGH
 #define ACTOR_INACTIVE LOW
 
 #define ACTOR_INVERSE(L) ((L == ACTOR_ACTIVE) ? ACTOR_INACTIVE : ACTOR_ACTIVE)
@@ -16,10 +16,10 @@
 using actor_t = uint8_t;
 
 class Actors {
-   private:
+	private:
 	DynamicArray<uint8_t> actors;
 
-   public:
+	public:
 	actor_t add(uint8_t actorPin);
 	actor_t add(uint8_t actorPin, uint8_t initialLevel);
 
@@ -27,4 +27,4 @@ class Actors {
 	void set(actor_t actor, uint8_t level);
 };
 
-#endif	// ACTORS_HPP
+#endif // ACTORS_HPP

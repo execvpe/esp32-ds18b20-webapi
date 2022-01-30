@@ -8,7 +8,7 @@
 #define CRLF "\r\n"
 
 class SimpleServer {
-   private:
+	private:
 	// private varibales
 	WiFiServer server;
 
@@ -20,15 +20,16 @@ class SimpleServer {
 
 	bool readLine(WiFiClient &client, char *buf, size_t len);
 
-   public:
+	public:
 	// public constructors
 	SimpleServer();
 
 	// public functions
 	WiFiClient accept();
 	void begin();
-	void handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int32_t));
+	void handleConnection(WiFiClient &client, int32_t (*check)(const char *),
+						  void (*send)(WiFiClient &, const char *, int32_t));
 	bool isAvailable(WiFiClient &client);
 };
 
-#endif	// SIMPLESERVER_HPP
+#endif // SIMPLESERVER_HPP

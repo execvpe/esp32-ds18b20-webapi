@@ -3,7 +3,7 @@
 #define INVALIDATE_AFTER_SEC 45
 
 #define POWER_ON_RST_VALUE (85.0F)
-#define INVALID_READ (-127.0F)
+#define INVALID_READ       (-127.0F)
 
 #define FLOAT_EQUALS(X, Y) (abs(X - Y) < std::numeric_limits<float>::epsilon())
 
@@ -12,12 +12,12 @@
 static inline void updateHead(void *compare, void *value);
 
 struct Reading {
-   private:
+	private:
 	// private variables
 
 	size_t index;
 
-   public:
+	public:
 	// public variables
 
 	float temperature;
@@ -28,13 +28,13 @@ struct Reading {
 
 	Reading(size_t index) {
 		this->index = index;
-		//Serial.printf("Reading-Constructor Pos. %i\n", index);
+		// Serial.printf("Reading-Constructor Pos. %i\n", index);
 
 		updateHead(nullptr, this);
 	}
 
 	~Reading() {
-		//Serial.printf("Reading-Destructor Pos. %i\n", index);
+		// Serial.printf("Reading-Destructor Pos. %i\n", index);
 
 		updateHead(this, nullptr);
 
@@ -60,8 +60,7 @@ float TSensor::readCelsius(uint8_t sensorIdx) {
 		value = sensors.getTempCByIndex(sensorIdx);
 
 		if (FLOAT_EQUALS(value, INVALID_READ)) {
-			Serial.printf("[%i] Sensor %i: INVALID_READ (%.2f C). Reading again...\n",
-						  i, sensorIdx, value);
+			Serial.printf("[%i] Sensor %i: INVALID_READ (%.2f C). Reading again...\n", i, sensorIdx, value);
 			VTASK_DELAY(100);
 			sensors.requestTemperatures();
 			VTASK_DELAY(1200);
@@ -70,8 +69,7 @@ float TSensor::readCelsius(uint8_t sensorIdx) {
 		if (!FLOAT_EQUALS(value, POWER_ON_RST_VALUE))
 			break;
 
-		Serial.printf("[%i] Sensor %i: POWER_ON_RST_VALUE (%.2f C). Reading again...\n",
-					  i, sensorIdx, value);
+		Serial.printf("[%i] Sensor %i: POWER_ON_RST_VALUE (%.2f C). Reading again...\n", i, sensorIdx, value);
 		VTASK_DELAY(100);
 		sensors.requestTemperatures();
 		VTASK_DELAY(1200);
@@ -88,8 +86,8 @@ float TSensor::readCelsius(uint8_t sensorIdx) {
 // public constructors
 
 TSensor::TSensor(uint8_t busPin) : oneWire(busPin), sensors(&oneWire) {
-	//sensors.setResolution(12);
-	//sensors.setWaitForConversion(true);
+	// sensors.setResolution(12);
+	// sensors.setWaitForConversion(true);
 	sensors.begin();
 }
 
@@ -134,7 +132,7 @@ float TSensor::getFahrenheit(uint8_t sensorIdx) {
 void TSensor::updateAll() {
 	sensors.requestTemperatures();
 
-	Reading *drag = nullptr;
+	Reading *drag    = nullptr;
 	Reading *current = head;
 	for (size_t idx = 0;; idx++) {
 		float temp;
@@ -152,7 +150,7 @@ void TSensor::updateAll() {
 		}
 
 		if (current == nullptr) {
-			current = new Reading(idx);
+			current       = new Reading(idx);
 			current->next = nullptr;
 		}
 
@@ -161,9 +159,9 @@ void TSensor::updateAll() {
 		}
 
 		current->temperature = temp;
-		current->timestamp = millis();
+		current->timestamp   = millis();
 
-		drag = current;
+		drag    = current;
 		current = current->next;
 	}
 }

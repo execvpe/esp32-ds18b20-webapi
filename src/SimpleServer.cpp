@@ -5,45 +5,33 @@
 #include "StringMacros.hpp"
 
 #define CLIENT_TIMEOUT_SEC 5
-#define HTTP_REQUEST_SIZE 256  // max. 8192
+#define HTTP_REQUEST_SIZE  256 // max. 8192
 
 namespace HttpHeaders {
-	constexpr char f_badRequest400[] =
-		"HTTP/1.1 400 Bad Request" CRLF
-		"Content-type:text/html; charset=utf-8" CRLF
-		"Connection: close" CRLF
-			CRLF
-		"<html><head>"
-		"<title>400 Bad Request</title>"
-		"</head><body>"
-		"<h1>Bad Request</h1><br>"
-		"<p>Your browser sent a request that this server could not understand.</p><br>"
-		"<p>The requested line \"%s\" is probably too long.<br>"
-		"(Limit: %i bytes)</p>"
-		"</body></html>" CRLF;
+	constexpr char f_badRequest400[] = "HTTP/1.1 400 Bad Request" CRLF "Content-type:text/html; charset=utf-8" CRLF
+									   "Connection: close" CRLF CRLF "<html><head>"
+									   "<title>400 Bad Request</title>"
+									   "</head><body>"
+									   "<h1>Bad Request</h1><br>"
+									   "<p>Your browser sent a request that this server could not understand.</p><br>"
+									   "<p>The requested line \"%s\" is probably too long.<br>"
+									   "(Limit: %i bytes)</p>"
+									   "</body></html>" CRLF;
 
-	constexpr char f_movedPermanently301[] =
-		"HTTP/1.1 301 Moved Permanently" CRLF
-		"Location: %s" CRLF;
+	constexpr char f_movedPermanently301[] = "HTTP/1.1 301 Moved Permanently" CRLF "Location: %s" CRLF;
 
-	constexpr char f_notFound404[] =
-		"HTTP/1.1 404 Not Found" CRLF
-		"Content-type:text/html; charset=utf-8" CRLF
-		"Connection: close" CRLF
-			CRLF
-		"<html><head>"
-		"<title>404 Not Found</title>"
-		"</head><body>"
-		"<h1>Not Found</h1><br>"
-		"<p>The requested element \"%s\" was not found on this server.</p>"
-		"</body></html>" CRLF;
+	constexpr char f_notFound404[] = "HTTP/1.1 404 Not Found" CRLF "Content-type:text/html; charset=utf-8" CRLF
+									 "Connection: close" CRLF CRLF "<html><head>"
+									 "<title>404 Not Found</title>"
+									 "</head><body>"
+									 "<h1>Not Found</h1><br>"
+									 "<p>The requested element \"%s\" was not found on this server.</p>"
+									 "</body></html>" CRLF;
 
 	constexpr char ok200[] =
-		"HTTP/1.1 200 OK" CRLF
-		"Content-type:text/html; charset=utf-8" CRLF
-		"Connection: close" CRLF;
+		"HTTP/1.1 200 OK" CRLF "Content-type:text/html; charset=utf-8" CRLF "Connection: close" CRLF;
 
-}  // namespace HttpHeaders
+} // namespace HttpHeaders
 
 // private functions
 
@@ -94,7 +82,7 @@ bool SimpleServer::readLine(WiFiClient &client, char *buf, size_t len) {
 
 // public constructors
 
-SimpleServer::SimpleServer() : server(80){};
+SimpleServer::SimpleServer() : server(80) {};
 
 // public functions
 
@@ -112,7 +100,8 @@ void SimpleServer::begin() {
 	server.begin();
 }
 
-void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const char *), void (*send)(WiFiClient &, const char *, int32_t)) {
+void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const char *),
+									void (*send)(WiFiClient &, const char *, int32_t)) {
 	char request[HTTP_REQUEST_SIZE];
 	if (!readLine(client, request, HTTP_REQUEST_SIZE)) {
 		httpBadRequest400(client, request);
@@ -125,7 +114,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 
 	const char *tokens[3];
 	char *saveptr = NULL;
-	tokens[0] = strtok_r(request, " ", &saveptr);
+	tokens[0]     = strtok_r(request, " ", &saveptr);
 	if (tokens[0] == NULL || !STRING_MATCH_FIRST(tokens[0], "GET", 3)) {
 		httpBadRequest400(client, requestDup);
 		return;
@@ -135,7 +124,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 
 	if (tokens[1] != NULL && tokens[2] != NULL) {
 		if (STRING_EQUALS(tokens[2], "HTTP/1.0") || STRING_EQUALS(tokens[2], "HTTP/1.1")) {
-			if (STRING_EQUALS(tokens[1], "/")) {  // root directory
+			if (STRING_EQUALS(tokens[1], "/")) { // root directory
 				httpMovedPermanently301(client, "/index.html");
 				return;
 			}
@@ -148,7 +137,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 
 			httpOK200(client, requestDup);
 			(*send)(client, tokens[1], code);
-			client.println();  // end the HTTP response
+			client.println(); // end the HTTP response
 			return;
 		}
 	}
@@ -156,7 +145,7 @@ void SimpleServer::handleConnection(WiFiClient &client, int32_t (*check)(const c
 }
 
 bool SimpleServer::isAvailable(WiFiClient &client) {
-	unsigned long currentTime = millis();
+	unsigned long currentTime  = millis();
 	unsigned long previousTime = currentTime;
 
 	while (client.connected()) {

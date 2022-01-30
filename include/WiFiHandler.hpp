@@ -3,7 +3,7 @@
 #define WIFIHANDLER_HPP
 
 class WiFiHandler {
-   public:
+	public:
 	// public constructors
 	WiFiHandler();
 	WiFiHandler(const char *hostname);
@@ -14,4 +14,4 @@ class WiFiHandler {
 	void checkActiveConnection();
 };
 
-#endif	// WIFIHANDLER_HPP
+#endif // WIFIHANDLER_HPP

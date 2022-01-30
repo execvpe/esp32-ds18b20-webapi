@@ -17,7 +17,7 @@ void DynamicArray<E>::checkAlloc(size_t requestedSize) {
 
 	size = MAX(size + 4, requestedSize);
 
-	data = reinterpret_cast<E*>(realloc(data, size * sizeof(E)));
+	data = reinterpret_cast<E *>(realloc(data, size * sizeof(E)));
 	if (data == nullptr)
 		abort();
 
@@ -35,7 +35,7 @@ DynamicArray<E>::DynamicArray(size_t initialSize) {
 
 	size = initialSize;
 
-	data = reinterpret_cast<E*>(calloc(size, sizeof(E)));
+	data = reinterpret_cast<E *>(calloc(size, sizeof(E)));
 	if (data == nullptr)
 		abort();
 	return;
@@ -45,13 +45,13 @@ DynamicArray<E>::DynamicArray(size_t initialSize) {
 
 template <typename E>
 DynamicArray<E>::~DynamicArray() {
-	free(static_cast<void*>(data));
+	free(static_cast<void *>(data));
 }
 
 // public operators
 
 template <typename E>
-E& DynamicArray<E>::operator[](size_t idx) {
+E &DynamicArray<E>::operator[](size_t idx) {
 	checkAlloc(idx + 1);
 
 	return data[idx];

@@ -11,4 +11,4 @@ void decryptShuffled(const uint8_t *__restrict raw, size_t idxPos, char *__restr
 #define ENCRYPTED_FIELD encryptedField
 #endif
 
-#endif	// DECRYPT_HPP
+#endif // DECRYPT_HPP

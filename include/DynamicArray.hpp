@@ -6,15 +6,15 @@
 
 template <typename E>
 class DynamicArray {
-   private:
+	private:
 	// private variables
-	E* data;
+	E *data;
 	size_t size;
 
 	// private functions
 	void checkAlloc(size_t requested);
 
-   public:
+	public:
 	// public constructors
 	DynamicArray();
 	DynamicArray(size_t initialSize);
@@ -23,7 +23,7 @@ class DynamicArray {
 	~DynamicArray();
 
 	// public operators
-	E& operator[](size_t idx);
+	E &operator[](size_t idx);
 
 	// public functions
 
@@ -32,4 +32,4 @@ class DynamicArray {
 
 #include "DynamicArray.tpp"
 
-#endif	// DYNAMIC_ARRAY_HPP
+#endif // DYNAMIC_ARRAY_HPP

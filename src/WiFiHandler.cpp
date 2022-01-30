@@ -10,14 +10,14 @@
 
 /////////////////////////////////////////////////////////////////////
 
-namespace {	 // "static"
+namespace { // "static"
 #ifdef STATIC_IP
 	IPAddress localIP(172, 28, 116, 0);
 	IPAddress gateway(172, 28, 0, 1);
 	IPAddress subnet(255, 255, 0, 0);
 	IPAddress primaryDNS(172, 28, 0, 1);
 #endif
-};	// namespace
+}; // namespace
 
 // public constructors
 
