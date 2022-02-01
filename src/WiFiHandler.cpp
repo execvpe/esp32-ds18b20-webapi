@@ -3,8 +3,8 @@
 #include <HardwareSerial.h>
 #include <WiFi.h>
 
-#include "decrypt.hpp"
-#include "encData.hpp"
+#include "deobfuscate.hpp"
+#include "obfuscatedData.hpp"
 
 // #define STATIC_IP
 
@@ -39,8 +39,8 @@ WiFiHandler::WiFiHandler(const char *hostname) {
 void WiFiHandler::begin() {
 	char ssid[33];
 	char password[65];
-	decryptShuffled(ENCRYPTED_FIELD, 0, ssid);
-	decryptShuffled(ENCRYPTED_FIELD, 1, password);
+	ObfuscatedCredentials::deobfuscate(ObfuscatedCredentials::data, 0, ssid);
+	ObfuscatedCredentials::deobfuscate(ObfuscatedCredentials::data, 1, password);
 
 	Serial.printf("Connecting to SSID \"%s\"...", ssid);
 

@@ -5,7 +5,7 @@ ESP32 Web-API that can provide sensor readings from DS18B20 temperature sensors 
 
 - Import as a new PlatformIO Project in VS Code
 - Set up your WiFi credentials:
-  - Create a new *encData.hpp* header using my project [Credentials Obfuscating Tool](https://github.com/execvpe/credentials-obfuscating-tool) and place it in the *include* directory
+  - Create a new *obfuscatedData.hpp* header using my project [Credentials Obfuscating Tool](https://github.com/execvpe/credentials-obfuscating-tool) and place it in the *lib/deobfuscate/src/* directory
   - Alternatively: Change the WiFiHandler by adding your hardcoded credentials in the begin() function (C/C++ knowledge required)
 - Compile and upload to an ESP32 using PlatformIO
 

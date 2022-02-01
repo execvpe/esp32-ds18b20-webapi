@@ -3,6 +3,5 @@
 .vscode/launch.json
 .vscode/settings.json
 
-lib/
-
-include/encData.hpp
+# Did you really think I would give you my wifi password? :)
+lib/deobfuscate/src/obfuscatedData.hpp
