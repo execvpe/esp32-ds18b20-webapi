@@ -1,16 +1,15 @@
 # ESP32 Temperature Sensor
 ESP32 Web-API that can provide sensor readings from DS18B20 temperature sensors on the network
 
-
 ## Build
 
 - Import as a new PlatformIO Project in VS Code
 - Set up your WiFi credentials:
-  - Create a new *encData.hpp* header using my project [Credentials Obfuscator](https://github.com/execvpe/credentials-obfuscator) and place it in the include directory
-  - Change the WiFiHandler by adding your hardcoded credentials in the begin() function
+  - Create a new *encData.hpp* header using my project [Credentials Obfuscating Tool](https://github.com/execvpe/credentials-obfuscating-tool) and place it in the *include* directory
+  - Alternatively: Change the WiFiHandler by adding your hardcoded credentials in the begin() function (C/C++ knowledge required)
 - Compile and upload to an ESP32 using PlatformIO
 
-## Behavior
+## Default behavior
 
 The ESP32 is ready immediately after booting. You can read out debug information via the serial interface.
 
@@ -43,7 +42,6 @@ e.g. ```GET SENSOR/TEMPERATURE/0/VALUE/C HTTP/1.1```
 
 ### *Actor/Buzzer* requests (beta!):
 
-
 ```ACTOR/BUZZER/<n>/OFF``` and ```ACTOR/BUZZER/<n>/ON[/<value>]``` (unit: milliseconds) return
 ```
 OK. Buzzer <n>: OFF|ON|BEEP/SIGNAL
@@ -51,6 +49,6 @@ OK. Buzzer <n>: OFF|ON|BEEP/SIGNAL
 
 ## Licensing
 
-Any files not written by me, I release under the license under which they were originally released. If the licenses of the third-party code are not explicitly stated in the file *[CONTRIBUTORS.md](CONTRIBUTORS.md)* or the third-party files themselves, please contact the original author for more information on the license used.
+Any code not written by me, I release under the license under which it was originally released. If the license of any third-party code is not explicitly stated in the file *[CONTRIBUTORS.md](CONTRIBUTORS.md)* or with the third-party code itself, please contact the original author for more information on the license used.
 
 My code is released under the global project license in *[LICENSE](LICENSE)*.
