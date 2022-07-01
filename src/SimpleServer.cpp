@@ -89,7 +89,7 @@ SimpleServer::SimpleServer() : server(80) {};
 WiFiClient SimpleServer::accept() {
 	while (1) {
 		WiFiClient client = server.available();
-		delay(1);
+		delay(1); // Not sure why, but the delay is required...
 
 		if (client)
 			return client;

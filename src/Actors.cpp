@@ -9,7 +9,11 @@ actor_t Actors::add(uint8_t actorPin) {
 }
 
 actor_t Actors::add(uint8_t actorPin, uint8_t initialLevel) {
-	static size_t count = 0;
+	static actor_t count = 0;
+
+	if (count >= ACTORS_MAX) {
+		abort();
+	}
 
 	actors[count] = actorPin;
 

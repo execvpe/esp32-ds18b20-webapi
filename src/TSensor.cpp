@@ -9,61 +9,23 @@
 
 #define VTASK_DELAY(MS) (vTaskDelay(((TickType_t) (MS)) / portTICK_RATE_MS))
 
-static inline void updateHead(void *compare, void *value);
-
 struct Reading {
-	private:
-	// private variables
-
-	size_t index;
-
-	public:
-	// public variables
-
 	float temperature;
 	unsigned long timestamp;
-	Reading *next;
-
-	// public constructors
-
-	Reading(size_t index) {
-		this->index = index;
-		// Serial.printf("Reading-Constructor Pos. %i\n", index);
-
-		updateHead(nullptr, this);
-	}
-
-	~Reading() {
-		// Serial.printf("Reading-Destructor Pos. %i\n", index);
-
-		updateHead(this, nullptr);
-
-		// "The value of the operand of delete may be a null pointer value."
-		// Delete recursively
-		delete next;
-	}
 };
-
-static Reading *head = nullptr;
-
-static inline void updateHead(void *compare, void *value) {
-	if (head == compare)
-		head = static_cast<Reading *>(value);
-}
 
 // private functions
 
 float TSensor::readCelsius(uint8_t sensorIdx) {
 	float value;
 
-	for (size_t i = 0; i < 3; i++) {
+	for (size_t i = 0; i < 2; i++) {
 		value = sensors.getTempCByIndex(sensorIdx);
 
 		if (FLOAT_EQUALS(value, INVALID_READ)) {
 			Serial.printf("[%i] Sensor %i: INVALID_READ (%.2f C). Reading again...\n", i, sensorIdx, value);
-			VTASK_DELAY(100);
 			sensors.requestTemperatures();
-			VTASK_DELAY(1200);
+			VTASK_DELAY(800);
 			continue;
 		}
 		if (!FLOAT_EQUALS(value, POWER_ON_RST_VALUE))
@@ -93,75 +55,6 @@ TSensor::TSensor(uint8_t busPin) : oneWire(busPin), sensors(&oneWire) {
 
 // public functions
 
-unsigned long TSensor::elapsedSince(uint8_t sensorIdx) {
-	if (head == nullptr)
-		throw -127;
-
-	Reading *current = head;
-	for (size_t idx = 0; idx < sensorIdx; idx++) {
-		if (current->next != nullptr) {
-			current = current->next;
-			continue;
-		}
-		throw -127;
-	}
-
-	return abs(millis() - current->timestamp);
-}
-
-float TSensor::getCelsius(uint8_t sensorIdx) {
-	if (head == nullptr)
-		throw -127;
-
-	Reading *current = head;
-	for (size_t idx = 0; idx < sensorIdx; idx++) {
-		if (current->next != nullptr) {
-			current = current->next;
-			continue;
-		}
-		throw -127;
-	}
-
-	return current->temperature;
-}
-
-float TSensor::getFahrenheit(uint8_t sensorIdx) {
-	return sensors.toFahrenheit(this->getCelsius(sensorIdx));
-}
-
-void TSensor::updateAll() {
-	sensors.requestTemperatures();
-
-	Reading *drag    = nullptr;
-	Reading *current = head;
-	for (size_t idx = 0;; idx++) {
-		float temp;
-		try {
-			temp = this->readCelsius(idx);
-		} catch (int e) {
-			if (current && (abs(millis() - current->timestamp) > (INVALIDATE_AFTER_SEC * 1000))) {
-				Serial.printf("Value No. %i is no longer valid!\n", idx);
-				delete current;
-				if (drag != nullptr) {
-					drag->next = nullptr;
-				}
-			}
-			return;
-		}
-
-		if (current == nullptr) {
-			current       = new Reading(idx);
-			current->next = nullptr;
-		}
-
-		if (drag != nullptr) {
-			drag->next = current;
-		}
-
-		current->temperature = temp;
-		current->timestamp   = millis();
-
-		drag    = current;
-		current = current->next;
-	}
+float TSensor::readFahrenheit(uint8_t sensorIdx) {
+	return sensors.toFahrenheit(this->readCelsius(sensorIdx));
 }

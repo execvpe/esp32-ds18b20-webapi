@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "DynamicArray.hpp"
+#define ACTORS_MAX 3
 
 #define ACTOR_ACTIVE   HIGH
 #define ACTOR_INACTIVE LOW
@@ -17,9 +17,11 @@ using actor_t = uint8_t;
 
 class Actors {
 	private:
-	DynamicArray<uint8_t> actors;
+	// private variables
+	uint8_t actors[ACTORS_MAX];
 
 	public:
+	// public functions
 	actor_t add(uint8_t actorPin);
 	actor_t add(uint8_t actorPin, uint8_t initialLevel);
 
