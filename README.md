@@ -15,34 +15,24 @@ The ESP32 is ready immediately after booting. You can read out debug information
 
 ## Communicate with the API
 
-Send an HTTP-GET request to the web server listening on default port 80.
+Send a `GET` (HTTP/1.0 or HTTP/1.1) request to the web server listening on default port `80`.
 
-e.g. ```GET SENSOR/TEMPERATURE/0/VALUE/C HTTP/1.1```
+e.g. `GET SENSOR/TEMPERATURE/0/VALUE/C HTTP/1.1`
 
 ### *Sensor* requests:
 
-```SENSOR/TEMPERATURE/<n>/VALUE/<C|F>``` returns a ```float``` formatted with ```%.2f```:
+`SENSOR/TEMPERATURE/<n>/VALUE/<C|F>` returns a `float` (format: `%.2f`):
+
 ```
 21.75
 ```
 
-```SENSOR/TEMPERATURE/<n>/ELAPSED_TIME/MS``` returns an ```unsigned long```:
-```
-532
-```
+**Sensor requests may return ```INVALID READ: -127``` on failure.**
 
-```SENSOR/TEMPERATURE/<n>/_ALL``` returns all (meta)data:
-```
-21.75 C
-71.15 F
-8108 MS
-```
+### *Actor/Buzzer* requests:
 
-**All sensor requests may return ```INVALID READ: -127``` on failure.**
+`ACTOR/BUZZER/<n>/OFF` and `ACTOR/BUZZER/<n>/ON[/<value>]` (unit: milliseconds) return a `string`:
 
-### *Actor/Buzzer* requests (beta!):
-
-```ACTOR/BUZZER/<n>/OFF``` and ```ACTOR/BUZZER/<n>/ON[/<value>]``` (unit: milliseconds) return
 ```
 OK. Buzzer <n>: OFF|ON|BEEP/SIGNAL
 ```
