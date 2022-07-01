@@ -103,12 +103,13 @@ static int32_t checkHttp(const char *const path) {
 		fullRequest = newState;
 
 		if (STRING_EQUALS(fullRequest, "/OFF")) {
-			int32_t returnCode = 0;
-			SET_BYTE(returnCode, int32_t, 3, 'B'); // Buzzer
-			SET_BYTE(returnCode, int32_t, 1, 0);   // Off
-			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
+			uint8_t success = actors.set(buzzerIdx, ACTOR_INACTIVE);
 
-			actors.set(buzzerIdx, ACTOR_INACTIVE);
+			int32_t returnCode = 0;
+			SET_BYTE(returnCode, int32_t, 3, 'B');     // Buzzer
+			SET_BYTE(returnCode, int32_t, 2, success); // Success
+			SET_BYTE(returnCode, int32_t, 1, 0);       // Off
+			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
 
 			return returnCode;
 		}
@@ -117,12 +118,13 @@ static int32_t checkHttp(const char *const path) {
 			STRING_PRUNE_SUBSTRING(fullRequest, "/ON");
 
 			if (*fullRequest == '\0') {
-				int32_t returnCode = 0;
-				SET_BYTE(returnCode, int32_t, 3, 'B'); // Buzzer
-				SET_BYTE(returnCode, int32_t, 1, 1);   // On
-				SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
+				uint8_t success = actors.set(buzzerIdx, ACTOR_ACTIVE);
 
-				actors.set(buzzerIdx, ACTOR_ACTIVE);
+				int32_t returnCode = 0;
+				SET_BYTE(returnCode, int32_t, 3, 'B');     // Buzzer
+				SET_BYTE(returnCode, int32_t, 2, success); // Success
+				SET_BYTE(returnCode, int32_t, 1, 1);       // On
+				SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
 
 				return returnCode;
 			}
@@ -133,12 +135,13 @@ static int32_t checkHttp(const char *const path) {
 			if (endPtr == fullRequest || duration <= 0 || *endPtr != '\0')
 				return 0;
 
-			int32_t returnCode = 0;
-			SET_BYTE(returnCode, int32_t, 3, 'B'); // Buzzer
-			SET_BYTE(returnCode, int32_t, 1, 'S'); // Signal
-			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
+			uint8_t success = actors.signal(buzzerIdx, ACTOR_ACTIVE, duration);
 
-			actors.signal(buzzerIdx, ACTOR_ACTIVE, duration);
+			int32_t returnCode = 0;
+			SET_BYTE(returnCode, int32_t, 3, 'B');     // Buzzer
+			SET_BYTE(returnCode, int32_t, 2, success); // Success
+			SET_BYTE(returnCode, int32_t, 1, 'S');     // Signal
+			SET_BYTE(returnCode, int32_t, 0, buzzerIdx);
 
 			return returnCode;
 		}
@@ -159,7 +162,7 @@ static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 	try {
 		switch (GET_BYTE(code, 3)) {
 			case 'B': // Buzzer
-				const char *state;
+				const char *state, *success;
 				switch (GET_BYTE(code, 1)) {
 					case 0:
 						state = "OFF";
@@ -170,7 +173,9 @@ static void sendHttp(WiFiClient &client, const char *path, int32_t code) {
 					default:
 						state = "BEEP/SIGNAL";
 				}
-				client.printf("OK. Buzzer %i: %s", GET_BYTE(code, 0), state);
+				success = (GET_BYTE(code, 2)) ? "OK" : "FAIL";
+
+				client.printf("%s. Buzzer %i: %s", success, GET_BYTE(code, 0), state);
 				return;
 
 			case 'V': // Value

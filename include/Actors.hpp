@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#define ACTORS_MAX 3
+#define ACTORS_MAX 1
 
 #define ACTOR_ACTIVE   HIGH
 #define ACTOR_INACTIVE LOW
@@ -18,15 +18,16 @@ using actor_t = uint8_t;
 class Actors {
 	private:
 	// private variables
-	uint8_t actors[ACTORS_MAX];
+	actor_t actors[ACTORS_MAX];
+	actor_t count = 0;
 
 	public:
 	// public functions
 	actor_t add(uint8_t actorPin);
 	actor_t add(uint8_t actorPin, uint8_t initialLevel);
 
-	void signal(actor_t actor, uint8_t level, uint32_t period);
-	void set(actor_t actor, uint8_t level);
+	bool set(actor_t actor, uint8_t level);
+	bool signal(actor_t actor, uint8_t level, uint32_t period);
 };
 
 #endif // ACTORS_HPP

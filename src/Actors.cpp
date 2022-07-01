@@ -9,8 +9,6 @@ actor_t Actors::add(uint8_t actorPin) {
 }
 
 actor_t Actors::add(uint8_t actorPin, uint8_t initialLevel) {
-	static actor_t count = 0;
-
 	if (count >= ACTORS_MAX) {
 		abort();
 	}
@@ -23,12 +21,22 @@ actor_t Actors::add(uint8_t actorPin, uint8_t initialLevel) {
 	return count++;
 }
 
-void Actors::signal(actor_t actor, uint8_t level, uint32_t period) {
+bool Actors::set(actor_t actor, uint8_t level) {
+	if (actor >= count) {
+		return false;
+	}
+
+	digitalWrite(actors[actor], level);
+	return true;
+}
+
+bool Actors::signal(actor_t actor, uint8_t level, uint32_t period) {
+	if (actor >= count) {
+		return false;
+	}
+
 	digitalWrite(actors[actor], level);
 	delay(period);
 	digitalWrite(actors[actor], ACTOR_INVERSE(level));
-}
-
-void Actors::set(actor_t actor, uint8_t level) {
-	digitalWrite(actors[actor], level);
+	return true;
 }
