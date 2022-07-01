@@ -27,7 +27,7 @@ e.g. `GET SENSOR/TEMPERATURE/0/VALUE/C HTTP/1.1`
 21.75
 ```
 
-**Sensor requests may return ```INVALID READ: -127``` on failure.**
+**Responses to SENSOR requests contain `INVALID READ: -127` on failure.**
 
 ### *Actor/Buzzer* requests:
 
@@ -36,6 +36,8 @@ e.g. `GET SENSOR/TEMPERATURE/0/VALUE/C HTTP/1.1`
 ```
 OK. Buzzer <n>: OFF|ON|BEEP/SIGNAL
 ```
+
+**Responses to ACTOR requests start with `FAIL.` (instead of `OK.`) on failure.**
 
 ## Licensing
 
